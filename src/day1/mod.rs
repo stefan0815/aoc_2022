@@ -1,0 +1,29 @@
+use std::fs;
+
+pub fn day1func() {
+    let input = fs::read_to_string("./src/day1/input.txt")
+    .expect("Should have been able to read the file");
+    let elves = input.split("\r\n\r\n");
+    let mut elves_carry_list : Vec<i32> = Vec::new();
+    for elf in elves {
+        let elf_carries_as_string_list= elf.split("\r\n");
+        let mut elf_carries_as_number_list : Vec<i32> = Vec::new();
+        for elf_carry in elf_carries_as_string_list {
+            println!("{elf_carry}");
+            let elf_carry_trimmed = elf_carry.trim();
+            elf_carries_as_number_list.push(elf_carry_trimmed.parse::<i32>().unwrap());
+        }
+        let sum : i32 = elf_carries_as_number_list.clone().iter().sum();
+        elves_carry_list.push(sum);
+    }
+    elves_carry_list.sort();
+    elves_carry_list.reverse();
+    let max_carry_weight0 = elves_carry_list[0];
+    let max_carry_weight1 = elves_carry_list[1];
+    let max_carry_weight2 = elves_carry_list[2];
+    println!("Elf with max carry:  {max_carry_weight0} weight");
+    println!("Elf with max carry:  {max_carry_weight1} weight");
+    println!("Elf with max carry:  {max_carry_weight2} weight");
+    let sum_of_elves = elves_carry_list[0] + elves_carry_list[1] + elves_carry_list[2];
+    println!("Elf with max carry: {sum_of_elves}");
+}
