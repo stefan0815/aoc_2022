@@ -1,6 +1,6 @@
 use std::fs;
 
-pub fn day1func() {
+pub fn solver() {
     let input = fs::read_to_string("./src/day1/input.txt")
     .expect("Should have been able to read the file");
     let elves = input.split("\r\n\r\n");
