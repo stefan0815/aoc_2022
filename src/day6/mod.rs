@@ -1,7 +1,6 @@
-use std::{fs, collections::HashSet};
+use std::{collections::HashSet, fs};
 
-
-fn find_distinct_characters(input : &String, num_of_distinct_chars: usize) -> i32{
+fn find_distinct_characters(input: &String, num_of_distinct_chars: usize) -> i32 {
     let mut index = 0;
     let mut current_sequence: Vec<char> = Vec::new();
     for char in input.chars() {
@@ -23,7 +22,6 @@ pub fn solver() {
 
     let first_part = find_distinct_characters(&input, 4);
     let second_part = find_distinct_characters(&input, 14);
-    
 
     println!("Day6:");
     println!("First part: {first_part}");
