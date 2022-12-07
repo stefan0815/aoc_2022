@@ -77,7 +77,7 @@ fn calculate_part_two(directories: &HashMap<String, usize>) -> usize {
     }
 
     let size_to_be_freed = total_disk_usage_goal - free_space;
-    println!("Size to be freed: {}", size_to_be_freed);
+    // println!("Size to be freed: {}", size_to_be_freed);
     let mut optimal_size = total_disk_space;
     for (_, value) in directories {
         if value > &size_to_be_freed && value < &optimal_size {

@@ -5,15 +5,15 @@ enum CraneType {
     CrateMover9001,
 }
 
-fn print_state(states: &Vec<Vec<&str>>) {
-    println!("");
-    for state in states {
-        for s in state {
-            print!("{s}");
-        }
-        println!("");
-    }
-}
+// fn print_state(states: &Vec<Vec<&str>>) {
+//     println!("");
+//     for state in states {
+//         for s in state {
+//             print!("{s}");
+//         }
+//         println!("");
+//     }
+// }
 
 fn print_top_row(states: &Vec<Vec<&str>>){
     for state in states {
@@ -65,7 +65,7 @@ pub fn solver() {
     states.push(["C", "M", "D", "B", "F"].to_vec());
     states.push(["F", "C", "Q", "G"].to_vec());
 
-    print_state(&states);
+    // print_state(&states);
 
     let mut states_first_part : Vec<Vec<&str>>= states.clone();
     let mut states_second_part: Vec<Vec<&str>> = states.clone();
@@ -73,8 +73,8 @@ pub fn solver() {
     move_crates(&mut states_first_part, &actions, CraneType::CrateMover9000);
     move_crates(&mut states_second_part, &actions, CraneType::CrateMover9001);
 
-    print_state(&states_first_part);
-    print_state(&states_second_part);
+    // print_state(&states_first_part);
+    // print_state(&states_second_part);
 
     println!("Day5:");
     print!("First part: ");
