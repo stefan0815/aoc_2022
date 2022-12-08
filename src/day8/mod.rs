@@ -1,6 +1,6 @@
 extern crate ndarray;
 
-use ndarray::{prelude::*};
+use ndarray::prelude::*;
 use std::fs;
 
 fn calculate_scenic_scores(trees: &Vec<Vec<u32>>) -> Vec<Vec<u32>> {
@@ -63,27 +63,20 @@ fn check_tree_visibility_ndarray(trees: &Array2<u32>) -> Vec<Vec<bool>> {
     let cols = trees.columns().into_iter().count();
     let mut visible: Vec<Vec<bool>> = Vec::new();
     for _ in 0..rows {
-        visible.push(vec![false; cols]);
+        visible.push(vec![true; cols]);
     }
 
-    for x in 0..rows {
-        for y in 0..cols {
-            if x == 0 || y == 0 || x == rows - 1 || y == cols - 1 {
-                visible[x][y] = true;
-                continue;
-            }
-
+    for x in 1..rows - 1 {
+        for y in 1..cols - 1 {
             let slice_left = trees.slice(s![x, ..y]);
             let slice_right = trees.slice(s![x, y + 1..]);
             let slice_up = trees.slice(s![..x, y]);
             let slice_down = trees.slice(s![x + 1.., y]);
             let slices = [slice_left, slice_right, slice_up, slice_down];
             let largest_trees = slices.map(|slice| *slice.iter().max().unwrap());
-            let is_visible = largest_trees
+            visible[x][y] = largest_trees
                 .iter()
                 .any(|largest_tree| trees[[x, y]] > *largest_tree);
-
-            visible[x][y] = is_visible;
         }
     }
 
