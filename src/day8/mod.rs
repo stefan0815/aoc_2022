@@ -27,7 +27,7 @@ fn calculate_scenic_score(trees: &Array2<u32>, x: usize, y: usize) -> usize {
     if visible_trees_right.is_none() {
         scenic_score *= cols - y - 1;
     } else {
-        scenic_score *= visible_trees_right.unwrap()+ 1;
+        scenic_score *= visible_trees_right.unwrap() + 1;
     }
 
     let visible_trees_up = trees
@@ -39,7 +39,7 @@ fn calculate_scenic_score(trees: &Array2<u32>, x: usize, y: usize) -> usize {
     if visible_trees_up.is_none() {
         scenic_score *= x;
     } else {
-        scenic_score *= visible_trees_up.unwrap()+ 1;
+        scenic_score *= visible_trees_up.unwrap() + 1;
     }
 
     let visible_trees_down = trees
@@ -50,7 +50,7 @@ fn calculate_scenic_score(trees: &Array2<u32>, x: usize, y: usize) -> usize {
     if visible_trees_down.is_none() {
         scenic_score *= rows - x - 1;
     } else {
-        scenic_score *= visible_trees_down.unwrap()+ 1;
+        scenic_score *= visible_trees_down.unwrap() + 1;
     }
     return scenic_score;
 }
@@ -61,7 +61,7 @@ fn calculate_scenic_scores_ndarray(trees: &Array2<u32>) -> Array2<usize> {
     let mut scenic_scores = Array2::<usize>::ones((rows, cols));
     for x in 1..rows - 1 {
         for y in 1..cols - 1 {
-            scenic_scores[[x,y]] = calculate_scenic_score(trees, x, y);
+            scenic_scores[[x, y]] = calculate_scenic_score(trees, x, y);
         }
     }
     return scenic_scores;
