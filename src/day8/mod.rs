@@ -3,68 +3,74 @@ extern crate ndarray;
 use ndarray::prelude::*;
 use std::fs;
 
-fn calculate_scenic_scores(trees: &Vec<Vec<u32>>) -> Vec<Vec<u32>> {
-    let rows = trees.len();
-    let cols = trees.first().unwrap().len();
-    let mut scenic_scores: Vec<Vec<u32>> = Vec::new();
-    for _ in 0..rows {
-        scenic_scores.push(vec![1; cols]);
+fn calculate_scenic_score(trees: &Array2<u32>, x: usize, y: usize) -> usize {
+    let rows = trees.rows().into_iter().count();
+    let cols = trees.columns().into_iter().count();
+    let mut scenic_score = 1;
+    let visible_trees_left = trees
+        .slice(s![x, ..y])
+        .iter()
+        .rev()
+        .position(|tree_height| tree_height >= &trees[[x, y]]);
+
+    if visible_trees_left.is_none() {
+        scenic_score *= y;
+    } else {
+        scenic_score *= visible_trees_left.unwrap() + 1;
     }
-    for x in 0..rows {
-        for y in 0..cols {
-            if x == 0 || y == 0 || x == rows - 1 || y == cols - 1 {
-                scenic_scores[x][y] = 0;
-                continue;
-            }
 
-            let mut num_visible_trees = 0;
-            for blocking_tree in (&trees[x][..y]).into_iter().rev() {
-                num_visible_trees += 1;
-                if blocking_tree >= &trees[x][y] {
-                    break;
-                }
-            }
-            scenic_scores[x][y] *= num_visible_trees;
+    let visible_trees_right = trees
+        .slice(s![x, y + 1..])
+        .iter()
+        .position(|tree_height| tree_height >= &trees[[x, y]]);
 
-            num_visible_trees = 0;
-            for blocking_tree in (&trees[x][y + 1..]).into_iter() {
-                num_visible_trees += 1;
-                if blocking_tree >= &trees[x][y] {
-                    break;
-                }
-            }
-            scenic_scores[x][y] *= num_visible_trees;
+    if visible_trees_right.is_none() {
+        scenic_score *= cols - y - 1;
+    } else {
+        scenic_score *= visible_trees_right.unwrap()+ 1;
+    }
 
-            num_visible_trees = 0;
-            for blocking_tree in (&trees[..x]).into_iter().rev() {
-                num_visible_trees += 1;
-                if blocking_tree[y] >= trees[x][y] {
-                    break;
-                }
-            }
-            scenic_scores[x][y] *= num_visible_trees;
+    let visible_trees_up = trees
+        .slice(s![..x, y])
+        .iter()
+        .rev()
+        .position(|tree_height| tree_height >= &trees[[x, y]]);
 
-            num_visible_trees = 0;
-            for blocking_tree in (&trees[x + 1..]).into_iter() {
-                num_visible_trees += 1;
-                if blocking_tree[y] >= trees[x][y] {
-                    break;
-                }
-            }
-            scenic_scores[x][y] *= num_visible_trees;
+    if visible_trees_up.is_none() {
+        scenic_score *= x;
+    } else {
+        scenic_score *= visible_trees_up.unwrap()+ 1;
+    }
+
+    let visible_trees_down = trees
+        .slice(s![x + 1.., y])
+        .iter()
+        .position(|tree_height| tree_height >= &trees[[x, y]]);
+
+    if visible_trees_down.is_none() {
+        scenic_score *= rows - x - 1;
+    } else {
+        scenic_score *= visible_trees_down.unwrap()+ 1;
+    }
+    return scenic_score;
+}
+
+fn calculate_scenic_scores_ndarray(trees: &Array2<u32>) -> Array2<usize> {
+    let rows = trees.rows().into_iter().count();
+    let cols = trees.columns().into_iter().count();
+    let mut scenic_scores = Array2::<usize>::ones((rows, cols));
+    for x in 1..rows - 1 {
+        for y in 1..cols - 1 {
+            scenic_scores[[x,y]] = calculate_scenic_score(trees, x, y);
         }
     }
-
     return scenic_scores;
 }
 
-fn check_tree_visibility_ndarray(trees: &Array2<u32>) -> Vec<Vec<bool>> {
+fn check_tree_visibility_ndarray(trees: &Array2<u32>) -> Array2<u32> {
     let rows = trees.rows().into_iter().count();
     let cols = trees.columns().into_iter().count();
-    let mut visible: Vec<Vec<bool>> = Vec::new();
-    for _ in 0..rows {
-        visible.push(vec![true; cols]);
-    }
+    let mut visible: Array2<u32> = Array2::<u32>::ones((rows, cols));
 
     for x in 1..rows - 1 {
         for y in 1..cols - 1 {
@@ -74,9 +80,10 @@ fn check_tree_visibility_ndarray(trees: &Array2<u32>) -> Vec<Vec<bool>> {
             let slice_down = trees.slice(s![x + 1.., y]);
             let slices = [slice_left, slice_right, slice_up, slice_down];
             let largest_trees = slices.map(|slice| *slice.iter().max().unwrap());
-            visible[x][y] = largest_trees
+            visible[[x, y]] = largest_trees
                 .iter()
-                .any(|largest_tree| trees[[x, y]] > *largest_tree);
+                .any(|largest_tree| trees[[x, y]] > *largest_tree)
+                as u32;
         }
     }
 
@@ -105,19 +112,11 @@ pub fn solver() {
     }
 
     let visible = check_tree_visibility_ndarray(&trees_array);
-    let mut sum_part_one = 0;
-    for visible_row in visible {
-        sum_part_one += visible_row.iter().filter(|&v| *v).count();
-    }
+    let sum_part_one = visible.iter().filter(|&v| *v != 0).count();
 
-    let scenic_scores = calculate_scenic_scores(&trees);
-    let mut max_part_two = 0 as u32;
-    for scenic_score_row in scenic_scores {
-        let max_value = scenic_score_row.iter().max().unwrap();
-        if *max_value > max_part_two {
-            max_part_two = *max_value;
-        }
-    }
+    let scenic_scores = calculate_scenic_scores_ndarray(&trees_array);
+    let max_part_two = scenic_scores.iter().max().unwrap();
+
     println!("Day8:");
     println!("Visible trees: {}", sum_part_one);
     println!("Highest Scenic Score: {}", max_part_two);
