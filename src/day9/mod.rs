@@ -71,7 +71,7 @@ pub fn solver() {
                 move_tail(&tails[i - 1].clone(), &mut tails[i]);
             }
             let first_tail = tails.first().unwrap();
-            let last_tail = tails.first().unwrap();
+            let last_tail = tails.last().unwrap();
             hash_first_tail.insert((first_tail.x, first_tail.y));
             hash_last_tail.insert((last_tail.x, last_tail.y));
         }
