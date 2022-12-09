@@ -22,19 +22,8 @@ fn move_tail(head: &Pos, tail: &mut Pos) {
         return;
     }
 
-    if x_diff.abs() == 2 {
-        tail.x += x_diff / 2;
-        if y_diff.abs() == 1 {
-            tail.y = head.y;
-        }
-    }
-
-    if y_diff.abs() == 2 {
-        tail.y += y_diff / 2;
-        if x_diff.abs() == 1 {
-            tail.x = head.x;
-        }
-    }
+    tail.x += x_diff.signum();
+    tail.y += y_diff.signum();
 }
 
 impl Clone for Pos {
