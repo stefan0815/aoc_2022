@@ -36,6 +36,7 @@ fn move_tail(head: &Pos, tail: &mut Pos) {
         }
     }
 }
+
 impl Clone for Pos {
     fn clone(&self) -> Pos {
         return Pos {
@@ -49,13 +50,15 @@ pub fn solver() {
     let input =
         fs::read_to_string("./src/day9/input.txt").expect("Should have been able to read the file");
     let commands: Vec<&str> = input.split("\r\n").collect();
+
     let mut head: Pos = Pos { x: 0, y: 0 };
     let mut tails: Vec<Pos> = vec![head.clone(); 9];
 
     let mut hash_first_tail = HashSet::new();
-    hash_first_tail.insert((tails.first().unwrap().x, tails.first().unwrap().y));
     let mut hash_last_tail = HashSet::new();
-    hash_last_tail.insert((tails.last().unwrap().x, tails.last().unwrap().y));
+
+    hash_first_tail.insert((head.x, head.y));
+    hash_last_tail.insert((head.x, head.y));
 
     for command in commands {
         let split: Vec<&str> = command.split(" ").collect();
@@ -65,10 +68,12 @@ pub fn solver() {
             move_head(&mut head, dir);
             move_tail(&head, &mut tails[0]);
             for i in 1..tails.len() {
-                move_tail(&tails.clone()[i - 1], &mut tails[i]);
+                move_tail(&tails[i - 1].clone(), &mut tails[i]);
             }
-            hash_first_tail.insert((tails.first().unwrap().x, tails.first().unwrap().y));
-            hash_last_tail.insert((tails.last().unwrap().x, tails.last().unwrap().y));
+            let first_tail = tails.first().unwrap();
+            let last_tail = tails.first().unwrap();
+            hash_first_tail.insert((first_tail.x, first_tail.y));
+            hash_last_tail.insert((last_tail.x, last_tail.y));
         }
     }
     println!("Day9:");
