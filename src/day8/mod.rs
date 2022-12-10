@@ -70,22 +70,65 @@ fn calculate_scenic_scores_ndarray(trees: &Array2<u32>) -> Array2<usize> {
 fn check_tree_visibility_ndarray(trees: &Array2<u32>) -> Array2<u32> {
     let rows = trees.rows().into_iter().count();
     let cols = trees.columns().into_iter().count();
-    let mut visible: Array2<u32> = Array2::<u32>::ones((rows, cols));
+    let mut visible: Array2<u32> = Array2::<u32>::zeros((rows, cols));
+
+    for x in 0..rows {
+        visible[[x, 0]] = 0;
+        visible[[x, cols - 1]] = 0;
+    }
+    for y in 0..cols {
+        visible[[0, y]] = 0;
+        visible[[rows - 1, y]] = 0;
+    }
 
     for x in 1..rows - 1 {
+        let mut largest_tree_left = trees[[x, 0]];
+        let mut largest_tree_right = trees[[x, cols - 1]];
         for y in 1..cols - 1 {
-            let slice_left = trees.slice(s![x, ..y]);
-            let slice_right = trees.slice(s![x, y + 1..]);
-            let slice_up = trees.slice(s![..x, y]);
-            let slice_down = trees.slice(s![x + 1.., y]);
-            let slices = [slice_left, slice_right, slice_up, slice_down];
-            let largest_trees = slices.map(|slice| *slice.iter().max().unwrap());
-            visible[[x, y]] = largest_trees
-                .iter()
-                .any(|largest_tree| trees[[x, y]] > *largest_tree)
-                as u32;
+            if trees[[x, y]] > largest_tree_left {
+                visible[[x, y]] = 1;
+                largest_tree_left = trees[[x, y]];
+            }
+        }
+        for y in (1..cols - 1).rev() {
+            if trees[[x, y]] > largest_tree_right {
+                visible[[x, y]] = 1;
+                largest_tree_right = trees[[x, y]];
+            }
         }
     }
+
+    for y in 1..cols - 1 {
+        let mut largest_tree_up = trees[[0, y]];
+        let mut largest_tree_down = trees[[cols - 1, y]];
+        for x in 1..rows - 1 {
+            if trees[[x, y]] > largest_tree_up {
+                visible[[x, y]] = 1;
+                largest_tree_up = trees[[x, y]];
+            }
+        }
+        for x in (1..rows - 1).rev() {
+            if trees[[x, y]] > largest_tree_down {
+                visible[[x, y]] = 1;
+                largest_tree_down = trees[[x, y]];
+            }
+        }
+    }
+
+    // for x in 1..rows - 1 {
+    //     for y in 1..cols - 1 {
+    //         let slice_left = trees.slice(s![x, ..y]);
+    //         let slice_right = trees.slice(s![x, y + 1..]);
+    //         let slice_up = trees.slice(s![..x, y]);
+    //         let slice_down = trees.slice(s![x + 1.., y]);
+    //         let slices = [slice_left, slice_right, slice_up, slice_down];
+    //         let largest_trees = slices.map(|slice| *slice.iter().max().unwrap());
+    //         visible[[x, y]] = largest_trees
+    //             .iter()
+    //             .any(|largest_tree| trees[[x, y]] > *largest_tree)
+    //             as u32;
+    //     }
+    // }
 
     return visible;
 }
