@@ -22,7 +22,7 @@ fn reachable(height_map: &Vec<Vec<usize>>, from: &Pos, to: &Pos) -> bool {
         >= height_map[to.0 as usize][to.1 as usize];
 }
 
-fn neighbors(height_map: &Vec<Vec<usize>>, position: &Pos) -> Vec<(Pos,usize)> {
+fn neighbors(height_map: &Vec<Vec<usize>>, position: &Pos) -> Vec<(Pos, usize)> {
     let up = Pos(position.0, position.1 + 1);
     let down = Pos(position.0, position.1 - 1);
     let left = Pos(position.0 - 1, position.1);
@@ -31,8 +31,16 @@ fn neighbors(height_map: &Vec<Vec<usize>>, position: &Pos) -> Vec<(Pos,usize)> {
     if (position.0 + position.1) % 2 == 0 {
         neighbors.reverse();
     }
-    let filtered_neightbors: Vec<Pos> = neighbors.into_iter().filter(|neighbor| in_bounds(height_map, neighbor) && reachable(height_map, position, neighbor)).collect();
-    return filtered_neightbors.into_iter().map(|neighbor| (neighbor,1)).collect();
+    let filtered_neightbors: Vec<Pos> = neighbors
+        .into_iter()
+        .filter(|neighbor| {
+            in_bounds(height_map, neighbor) && reachable(height_map, position, neighbor)
+        })
+        .collect();
+    return filtered_neightbors
+        .into_iter()
+        .map(|neighbor| (neighbor, 1))
+        .collect();
 }
 
 fn convert_letter_to_height(letter: char) -> usize {
@@ -83,17 +91,17 @@ pub fn solver() {
         for y in row {
             if height_map[x][*y] == 0 {
                 let (_, steps) = astar(
-                    &Pos(x as i32,*y as i32),
+                    &Pos(x as i32, *y as i32),
                     |p| neighbors(&height_map, p),
                     |p| p.distance(&exit) / 3,
                     |p| *p == exit,
                 )
                 .unwrap();
-                if steps < min_steps_part_two{
+                if steps < min_steps_part_two {
                     min_steps_part_two = steps;
                 }
-            }         
-        }  
+            }
+        }
     }
 
     println!("Day12:");
