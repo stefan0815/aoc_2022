@@ -87,8 +87,8 @@ fn compare(elements_one: &str, elements_two: &str) -> Ordering {
             return Ordering::Greater;
         }
 
-        let val_one: usize = ele_one.parse().unwrap();
-        let val_two: usize = ele_two.parse().unwrap();
+        let val_one: i32 = ele_one.parse().unwrap();
+        let val_two: i32 = ele_two.parse().unwrap();
         if val_one < val_two {
             return Ordering::Less;
         }
