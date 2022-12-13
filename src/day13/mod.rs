@@ -1,4 +1,5 @@
 use core::panic;
+use std::cmp::Ordering;
 use std::fs;
 
 fn index_of_closing_bracket(slice: &str) -> usize {
@@ -26,7 +27,9 @@ fn convert_to_list(elements: &str) -> Vec<&str> {
         return elements.split(',').collect();
     }
     let chars: Vec<char> = elements.chars().collect();
-    if chars[0] == '[' && elements.chars().position(|char| char == ']').unwrap() == elements.chars().count() - 1 {
+    if chars[0] == '['
+        && elements.chars().position(|char| char == ']').unwrap() == elements.chars().count() - 1
+    {
         return elements[1..elements.len() - 1].split(',').collect();
     }
 
@@ -58,19 +61,20 @@ fn convert_to_list(elements: &str) -> Vec<&str> {
     return list;
 }
 
-fn compare_pair(pair_one: &str, pair_two: &str) -> i32 {
+fn compare_pair(pair_one: &str, pair_two: &str) -> Ordering {
     let next_elements_one = convert_to_list(pair_one);
     let next_elements_two = convert_to_list(pair_two);
     for (index, ele_one) in next_elements_one.iter().enumerate() {
         if index >= next_elements_two.len() {
-            return -1;
+            return Ordering::Greater;
         }
         let ele_two = next_elements_two[index];
 
-        if (ele_one.contains(",") || ele_one.contains("[")  || ele_one.contains("]")) 
-        && (ele_two.contains(",") || ele_two.contains("[")  || ele_two.contains("]")) {
+        if (ele_one.contains(",") || ele_one.contains("[") || ele_one.contains("]"))
+            && (ele_two.contains(",") || ele_two.contains("[") || ele_two.contains("]"))
+        {
             let comp = compare_pair(ele_one, ele_two);
-            if comp != 0 {
+            if comp != Ordering::Equal {
                 return comp;
             }
             continue;
@@ -79,59 +83,59 @@ fn compare_pair(pair_one: &str, pair_two: &str) -> i32 {
         if ele_one.contains(",") || ele_one.contains("[") {
             let list_one = convert_to_list(ele_one);
             if list_one.is_empty() {
-                return 1;
+                return Ordering::Less;
             }
             let comp = compare_pair(list_one.first().unwrap(), ele_two);
-            if comp != 0 {
+            if comp != Ordering::Equal {
                 return comp;
             }
             if list_one.len() == 1 {
                 continue;
             }
-            return -1;
+            return Ordering::Greater;
         }
-        if ele_two.contains(",") || ele_two.contains("["){
+        if ele_two.contains(",") || ele_two.contains("[") {
             let list_two = convert_to_list(ele_two);
             if list_two.is_empty() {
-                return -1;
+                return Ordering::Greater;
             }
             let comp = compare_pair(ele_one, list_two.first().unwrap());
-            if comp != 0 {
+            if comp != Ordering::Equal {
                 return comp;
             }
             if list_two.len() == 1 {
                 continue;
             }
-            return 1;
+            return Ordering::Less;
         }
 
         if ele_one.is_empty() && ele_two.is_empty() {
             continue;
         }
         if ele_one.is_empty() {
-            return 1;
+            return Ordering::Less;
         }
         if ele_two.is_empty() {
-            return -1;
+            return Ordering::Greater;
         }
 
         let val_one: usize = ele_one.parse().unwrap();
         let val_two: usize = ele_two.parse().unwrap();
         if val_one < val_two {
-            return 1;
+            return Ordering::Less;
         }
         if val_one > val_two {
-            return -1;
+            return Ordering::Greater;
         }
     }
 
     if next_elements_one.len() < next_elements_two.len() {
-        return 1;
+        return Ordering::Less;
     }
     if next_elements_one.len() > next_elements_two.len() {
-        return -1;
+        return Ordering::Greater;
     }
-    return 0;
+    return Ordering::Equal;
 }
 
 pub fn solver() {
@@ -142,13 +146,37 @@ pub fn solver() {
     for (index, pair) in pairs.iter().enumerate() {
         let split: Vec<&str> = pair.split("\r\n").collect();
         let comp = compare_pair(split[0], split[1]);
-        println!("compare: {} and {} == {}", split[0], split[1], comp);
-        if comp == 1 {
+        // let comp_val;
+        // match comp {
+        //     Ordering::Less => comp_val = 1,
+        //     Ordering::Equal => comp_val = 0,
+        //     Ordering::Greater => comp_val = -1,
+        // }
+        // println!("compare: {} and {} == {}", split[0], split[1], comp_val);
+        if comp == Ordering::Less {
             ordered_pairs.push(index + 1);
         }
     }
 
+    let mut packets: Vec<&str> = Vec::new();
+    packets.push("[[2]]");
+    packets.push("[[6]]");
+    for pair in pairs {
+        let mut split: Vec<&str> = pair.split("\r\n").collect();
+        packets.append(&mut split);
+    }
+
+    packets.sort_by(|a, b| return compare_pair(a, b));
+
+    let mut mult_part_two = 1;
+    for (index, packet) in packets.iter().enumerate() {
+        // println!("{}", packet);
+        if *packet == "[[2]]" || *packet == "[[6]]" {
+            mult_part_two *= index + 1;
+        }
+    }
     let sum_part_one: usize = ordered_pairs.iter().sum();
     println!("Day13:");
     println!("Number of Ordered Indices: {}", sum_part_one);
+    println!("Multiplication of divider Indices: {}", mult_part_two);
 }
