@@ -26,14 +26,9 @@ fn convert_to_list(elements: &str) -> Vec<&str> {
     if !elements.contains("[") {
         return elements.split(',').collect();
     }
-    let chars: Vec<char> = elements.chars().collect();
-    if chars[0] == '['
-        && elements.chars().position(|char| char == ']').unwrap() == elements.chars().count() - 1
-    {
-        return elements[1..elements.len() - 1].split(',').collect();
-    }
-
+    
     let mut list: Vec<&str> = Vec::new();
+    let chars: Vec<char> = elements.chars().collect();
 
     let mut last_index = 0;
     let mut index = 0;
