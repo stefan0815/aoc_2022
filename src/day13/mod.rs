@@ -26,7 +26,7 @@ fn convert_to_list(elements: &str) -> Vec<&str> {
     if !elements.contains("[") {
         return elements.split(',').collect();
     }
-    
+
     let mut list: Vec<&str> = Vec::new();
     let chars: Vec<char> = elements.chars().collect();
 
@@ -75,7 +75,7 @@ fn compare_pair(pair_one: &str, pair_two: &str) -> Ordering {
             continue;
         }
 
-        if ele_one.contains(",") || ele_one.contains("[") {
+        if ele_one.contains(",") || ele_one.contains("[") || ele_one.contains("]") {
             let list_one = convert_to_list(ele_one);
             if list_one.is_empty() {
                 return Ordering::Less;
@@ -89,7 +89,8 @@ fn compare_pair(pair_one: &str, pair_two: &str) -> Ordering {
             }
             return Ordering::Greater;
         }
-        if ele_two.contains(",") || ele_two.contains("[") {
+        
+        if ele_two.contains(",") || ele_two.contains("[") || ele_two.contains("]") {
             let list_two = convert_to_list(ele_two);
             if list_two.is_empty() {
                 return Ordering::Greater;
