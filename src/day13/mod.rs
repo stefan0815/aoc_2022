@@ -39,7 +39,7 @@ fn convert_to_list(elements: &str) -> Vec<&str> {
     let mut index = 0;
     while index < elements.len() {
         if chars[index] == '[' {
-            let end = index_of_closing_bracket(&elements[index..]); // check for empty list
+            let end = index_of_closing_bracket(&elements[index..]);
             list.push(&elements[index + 1..index + end]);
             index = index + end + 1;
             last_index = index;
