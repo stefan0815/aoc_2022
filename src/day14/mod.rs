@@ -47,16 +47,7 @@ fn simulate_sand_part_one(stone_layout: &HashMap<(i32, i32), Tile>) -> HashMap<(
             if sand.1 >= 9999 {
                 return layout;
             }
-            if !layout.contains_key(&(sand.0, sand.1 + 1)) {
-                sand = (sand.0, sand.1 + 1);
-                continue;
-            }
-            if !layout.contains_key(&(sand.0 - 1, sand.1 + 1)) {
-                sand = (sand.0 - 1, sand.1 + 1);
-                continue;
-            }
-            if !layout.contains_key(&(sand.0 + 1, sand.1 + 1)) {
-                sand = (sand.0 + 1, sand.1 + 1);
+            if advance_sand(&layout, &mut sand) {
                 continue;
             }
             layout.insert((sand.0, sand.1), Tile::SAND);
@@ -65,6 +56,21 @@ fn simulate_sand_part_one(stone_layout: &HashMap<(i32, i32), Tile>) -> HashMap<(
     }
 }
 
+fn advance_sand(layout: &HashMap<(i32, i32), Tile>, sand: &mut (i32, i32)) -> bool {
+    let mut can_sand_advance = false;
+    for advanced_sand in [
+        (sand.0, sand.1 + 1),
+        (sand.0 - 1, sand.1 + 1),
+        (sand.0 + 1, sand.1 + 1),
+    ] {
+        if !layout.contains_key(&advanced_sand) {
+            *sand = advanced_sand;
+            can_sand_advance = true;
+            break;
+        }
+    }
+    return can_sand_advance;
+}
 fn simulate_sand_part_two(
     stone_layout: &HashMap<(i32, i32), Tile>,
     floor: i32,
@@ -78,16 +84,7 @@ fn simulate_sand_part_two(
                 layout.insert((sand.0, sand.1), Tile::SAND);
                 break;
             }
-            if !layout.contains_key(&(sand.0, sand.1 + 1)) {
-                sand = (sand.0, sand.1 + 1);
-                continue;
-            }
-            if !layout.contains_key(&(sand.0 - 1, sand.1 + 1)) {
-                sand = (sand.0 - 1, sand.1 + 1);
-                continue;
-            }
-            if !layout.contains_key(&(sand.0 + 1, sand.1 + 1)) {
-                sand = (sand.0 + 1, sand.1 + 1);
+            if advance_sand(&layout, &mut sand) {
                 continue;
             }
             layout.insert((sand.0, sand.1), Tile::SAND);
@@ -133,5 +130,8 @@ pub fn solver() {
 
     println!("Day14:");
     println!("Number of resting sand part one: {}", sum_part_one);
-    println!("Number of resting sand part two: {} with floor: {}", sum_part_two, floor);
+    println!(
+        "Number of resting sand part two: {} with floor: {}",
+        sum_part_two, floor
+    );
 }
