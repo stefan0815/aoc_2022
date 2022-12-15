@@ -12,7 +12,7 @@ fn distance(pos1: (i32, i32), pos2: (i32, i32)) -> i32 {
 }
 
 fn solve_part_one(sensors: &Vec<Sensor>) -> usize {
-    let mut hashset: HashSet<(i32, i32)> = HashSet::new();
+    let mut hashset: HashSet<i32> = HashSet::new();
     let y_part_one = 2000000;
     for sensor in sensors {
         // println!("{}", sensor.distance);
@@ -20,11 +20,13 @@ fn solve_part_one(sensors: &Vec<Sensor>) -> usize {
         for x in
             sensor.pos.0 - (sensor.distance - diff)..sensor.pos.0 + (sensor.distance - diff) + 1
         {
-            hashset.insert((x, y_part_one));
+            hashset.insert(x);
         }
     }
     for sensor in sensors {
-        hashset.remove(&sensor.beacon);
+        if sensor.beacon.1 == y_part_one{
+            hashset.remove(&sensor.beacon.0);
+        }
     }
 
     return hashset.len();
