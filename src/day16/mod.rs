@@ -8,6 +8,25 @@ struct Valve {
     tunnels: Vec<String>,
 }
 
+fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: usize) -> usize {
+    let value = valves[valve].value(0, time - 1);
+    valves.get_mut(valve).unwrap().activated = true;
+    return value;
+}
+
+fn path_from_to(came_from: &HashMap<String, String>, from: &String, to: &String) -> Vec<String>{
+    let mut current_node = to.to_string();
+    let mut path: Vec<String> = Vec::new();
+    loop {
+        path.push(current_node.to_string());
+        if current_node == *from {
+            path.reverse();
+            return path;
+        }
+        current_node = came_from[&current_node].to_string();
+    }
+}
+
 fn a_star_search(
     valves: &HashMap<String, Valve>,
     start: &String, /*,
@@ -115,22 +134,26 @@ pub fn solver() {
         );
     }
 
-    // let valve = valves.get("OS").unwrap();
-    // println!("Distance from OS to KY: {}", valve.distance(&valves, &"KY".to_string()));
     let mut current = start.to_string();
     let mut time = 30;
     let mut total_pressure_released = 0;
     while time > 0 {
-        let (costs, came_from) = a_star_search(&valves, &current);
+        let value_of_current = valves[&current].value(0, time - 1);
+        println!("{value_of_current}");
+        if value_of_current > 0 {
+            total_pressure_released += open_valve(&mut valves, &current, time);
+            time -= 1;
+            continue;
+        }
+        let (costs, came_from) = a_star_search(&valves, &current);       
         let next_valve = find_best_valve(&valves, &costs, time - 1);
         if next_valve == ""{
             break;
         }
-        time -= costs[&next_valve];      
+
+        let path = path_from_to(&came_from, &current, &next_valve);
+        current = path[1..].first().unwrap().to_string();
         time -= 1;
-        total_pressure_released += valves[&next_valve].value(0, time);
-        valves.get_mut(&next_valve).unwrap().activated = true;
-        current = next_valve;
     }
 
     println!("Day16:");
