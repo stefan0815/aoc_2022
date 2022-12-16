@@ -9,7 +9,7 @@ struct Valve {
 }
 
 fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: usize) -> usize {
-    let value = valves[valve].value(0, time - 1);
+    let value = valves[valve].value(0, time);
     valves.get_mut(valve).unwrap().activated = true;
     return value;
 }
