@@ -46,13 +46,34 @@ impl Valve {
         if self.activated {
             return 0;
         }
-        return (time - distance - 1) * self.flow_rate;
+        let time_left_after_opening = time as i32 - distance as i32 - 1;
+        if time_left_after_opening < 0 {
+            return 0;
+        }
+        return time_left_after_opening as usize * self.flow_rate;
     }
 
     // fn distance(&self, valves: &HashMap<String, Valve>, to: &String) -> usize {
     //     let (cost_so_far, _) = a_star_search(valves, &self.name.to_string()/*, to*/);
     //     return cost_so_far[to];
     // }
+}
+
+fn find_best_valve(valves: &HashMap<String,Valve>, costs: &HashMap<String, usize>, time: usize) -> String{
+    let mut best_value = 0;
+    let mut best_valve: String = "".to_string();
+    for cost in costs {
+        if *cost.1 > time {
+            continue;
+        }
+        let value = valves[cost.0].value(*cost.1, time);
+        if value > best_value {
+            best_value = value;
+            best_valve = valves[cost.0].name.to_string();
+            // println!("From {current} to {} distance is {} min, value: {}", cost.0, cost.1, value);
+        }           
+    }
+    return best_valve
 }
 
 pub fn solver() {
@@ -96,12 +117,22 @@ pub fn solver() {
 
     // let valve = valves.get("OS").unwrap();
     // println!("Distance from OS to KY: {}", valve.distance(&valves, &"KY".to_string()));
-    let current = start.to_string();
+    let mut current = start.to_string();
     let mut time = 30;
+    let mut total_pressure_released = 0;
     while time > 0 {
-        let (cost, came_from) = a_star_search(&valves, &current);
+        let (costs, came_from) = a_star_search(&valves, &current);
+        let next_valve = find_best_valve(&valves, &costs, time - 1);
+        if next_valve == ""{
+            break;
+        }
+        time -= costs[&next_valve];      
         time -= 1;
+        total_pressure_released += valves[&next_valve].value(0, time);
+        valves.get_mut(&next_valve).unwrap().activated = true;
+        current = next_valve;
     }
 
     println!("Day16:");
+    println!("Greedy valve search: {total_pressure_released}");
 }
