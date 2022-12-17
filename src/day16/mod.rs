@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs};
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct Valve {
     name: String,
-    activated: bool,
+    opened: bool,
     flow_rate: usize,
     tunnels: Vec<String>,
 }
@@ -11,7 +11,7 @@ struct Valve {
 fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: &mut usize) -> usize {
     *time -= 1;
     let value = valves[valve].flow_rate * *time;
-    valves.get_mut(valve).unwrap().activated = true;
+    valves.get_mut(valve).unwrap().opened = true;
     return value;
 }
 
@@ -63,7 +63,7 @@ fn a_star_search(
 
 impl Valve {
     fn value(&self, distance: usize, time: usize) -> usize {
-        if self.activated {
+        if self.opened {
             return 0;
         }
         let time_left_after_opening = time as i32 - distance as i32 - 1;
@@ -72,33 +72,7 @@ impl Valve {
         }
         return time_left_after_opening as usize * self.flow_rate;
     }
-
-    // fn distance(&self, valves: &HashMap<String, Valve>, to: &String) -> usize {
-    //     let (cost_so_far, _) = a_star_search(valves, &self.name.to_string()/*, to*/);
-    //     return cost_so_far[to];
-    // }
 }
-
-// fn find_best_valve(
-//     valves: &HashMap<String, Valve>,
-//     distances: &HashMap<String, usize>,
-//     time: usize,
-// ) -> String {
-//     let mut best_value = 0;
-//     let mut best_valve: String = "".to_string();
-//     for cost in distances {
-//         if *cost.1 > time {
-//             continue;
-//         }
-//         let value = valves[cost.0].value(*cost.1, time);
-//         if value > best_value {
-//             best_value = value;
-//             best_valve = valves[cost.0].name.to_string();
-//             // println!("From {current} to {} distance is {} min, value: {}", cost.0, cost.1, value);
-//         }
-//     }
-//     return best_valve;
-// }
 
 fn get_remaining_valves_sorted(
     valves: &HashMap<String, Valve>,
@@ -109,14 +83,14 @@ fn get_remaining_valves_sorted(
     let mut valve_values: Vec<(String, usize)> = Vec::new();
     for (valve_name, valve) in valves {
         let distance = distances[valve_name];
-        if valve.activated || valve.flow_rate == 0 || distance as i32 >= time as i32 {
+        if valve.opened || valve.flow_rate == 0 || distance as i32 >= time as i32 {
             continue;
         }
         valve_values.push((valve_name.to_string(), valve.value(distance, time)));
         //distance
     }
     valve_values.sort_by(|a, b| a.1.cmp(&b.1));
-    valve_values.reverse();
+    // valve_values.reverse();
     if limit != 0 && valve_values.len() > limit {
         return valve_values[..limit].to_vec();
     }
@@ -208,7 +182,7 @@ pub fn solver() {
             name.to_string(),
             Valve {
                 name: name.to_string(),
-                activated: false,
+                opened: false,
                 flow_rate,
                 tunnels,
             },
