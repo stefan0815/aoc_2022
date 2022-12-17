@@ -1,4 +1,8 @@
-use std::{collections::{HashMap, VecDeque}, fs, cmp::max};
+use std::{
+    cmp::max,
+    collections::{HashMap, VecDeque},
+    fs,
+};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct Valve {
@@ -30,8 +34,7 @@ fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: &mut us
 
 fn a_star_search(
     valves: &HashMap<String, Valve>,
-    start: &String, /*,
-                    end: &String,*/
+    start: &String,
 ) -> (HashMap<String, usize>, HashMap<String, String>) {
     let mut frontier: VecDeque<Valve> = VecDeque::new();
     let mut cost_so_far: HashMap<String, usize> = HashMap::new();
@@ -43,10 +46,6 @@ fn a_star_search(
     while !frontier.is_empty() {
         let current = frontier.pop_front().unwrap();
         let current_name = current.name.to_string();
-
-        // if current_name == *end { //we do not have a priority queue as we can not estimate distance therfore all paths have to be searched
-        //     break;
-        // }
 
         for next in current.tunnels {
             let new_cost = cost_so_far.get(&current_name.to_string()).unwrap() + 1;
@@ -83,11 +82,10 @@ fn get_remaining_valves_sorted(
     let mut valve_values: Vec<(String, usize)> = Vec::new();
     for (valve_name, valve) in valves {
         let distance = distances[valve_name];
-        if valve.opened || valve.flow_rate == 0 || distance as i32 >= time as i32 {
+        if valve.opened || valve.flow_rate == 0 || distance as i32 + 1 >= time as i32 {
             continue;
         }
         valve_values.push((valve_name.to_string(), valve.value(distance, time)));
-        //distance
     }
     valve_values.sort_by(|a, b| a.1.cmp(&b.1));
     valve_values.reverse();
