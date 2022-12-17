@@ -366,11 +366,24 @@ fn are_paths_disjunct(path_one: &Vec<String>, path_two: &Vec<String>) -> bool {
     }
     return true;
 }
-fn find_disjunct_paths_with_max_value(all_paths: Vec<(usize, Vec<String>)>) -> usize {
+fn find_disjunct_paths_with_max_value(
+    all_paths: Vec<(usize, Vec<String>)>,
+    max_pressure_previous_limit: usize,
+) -> usize {
+    let mut sorted_paths = all_paths.clone();
+    sorted_paths.sort_by(|a, b| b.0.cmp(&a.0));
+    let max_pressure_single_path = sorted_paths.first().unwrap().0;
+
     let mut max_pressure = 0;
-    println!("All paths length: {}", all_paths.len());
-    for (pressure_one, path_one) in all_paths.clone() {
-        for (pressure_two, path_two) in all_paths.clone() {
+    for (pressure_one, path_one) in &sorted_paths {
+        if pressure_one + max_pressure_single_path < max(max_pressure, max_pressure_previous_limit)
+        {
+            break;
+        }
+        for (pressure_two, path_two) in &sorted_paths {
+            if pressure_one + pressure_two < max(max_pressure, max_pressure_previous_limit) { 
+                break;
+            }
             if are_paths_disjunct(&path_one, &path_two) {
                 let pressure = pressure_one + pressure_two;
                 if pressure > max_pressure {
@@ -407,7 +420,8 @@ fn solve_part_two_all_paths(valves: &HashMap<String, Valve>) -> (usize, usize) {
             max_total_pressure_released = max_pressure_release_path;
         }
         println!("Limit: {limit}, pressure_part_one: {max_pressure_release_path}");
-        let max_pressure_release_path_part_two = find_disjunct_paths_with_max_value(all_paths);
+        let max_pressure_release_path_part_two =
+            find_disjunct_paths_with_max_value(all_paths, max_total_pressure_released_part_two);
         if max_pressure_release_path_part_two > max_total_pressure_released_part_two {
             max_total_pressure_released_part_two = max_pressure_release_path_part_two;
         }
