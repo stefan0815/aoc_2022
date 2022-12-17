@@ -23,18 +23,18 @@ fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: &mut us
     return value;
 }
 
-fn path_from_to(came_from: &HashMap<String, String>, from: &String, to: &String) -> Vec<String> {
-    let mut current_node = to.to_string();
-    let mut path: Vec<String> = Vec::new();
-    loop {
-        path.push(current_node.to_string());
-        if current_node == *from {
-            path.reverse();
-            return path;
-        }
-        current_node = came_from[&current_node].to_string();
-    }
-}
+// fn path_from_to(came_from: &HashMap<String, String>, from: &String, to: &String) -> Vec<String> {
+//     let mut current_node = to.to_string();
+//     let mut path: Vec<String> = Vec::new();
+//     loop {
+//         path.push(current_node.to_string());
+//         if current_node == *from {
+//             path.reverse();
+//             return path;
+//         }
+//         current_node = came_from[&current_node].to_string();
+//     }
+// }
 
 fn a_star_search(
     valves: &HashMap<String, Valve>,
@@ -282,7 +282,7 @@ fn solve_part_two(valves: &HashMap<String, Valve>) -> usize {
     let time = 26;
     let mut early_break_limit = 0;
     let mut max_total_pressure_released = 0;
-    for limit in [2, 3, 5, 7, 0] {
+    for limit in [2, 3, /*0*/] {
         let (total_pressure_released, total_pressure_released_elephant, _, _) = solve_part_two_step(
             &mut valves.clone(),
             &start.to_string(),
@@ -400,7 +400,7 @@ fn solve_part_two_all_paths(valves: &HashMap<String, Valve>) -> (usize, usize) {
     let time = 26;
     let mut max_total_pressure_released = 0;
     let mut max_total_pressure_released_part_two = 0;
-    for limit in [2, 3, 5, 7, 0] {
+    for limit in [3, 7, 0] {
         let all_paths =
             get_all_paths_single_walker(&mut valves.clone(), &start.to_string(), time, limit, 0);
         let mut max_pressure_release_path = 0;
@@ -434,77 +434,77 @@ fn solve_part_two_all_paths(valves: &HashMap<String, Valve>) -> (usize, usize) {
     );
 }
 
-fn find_best_valve(
-    valves: &HashMap<String, Valve>,
-    distances: &HashMap<String, usize>,
-    time: usize,
-) -> String {
-    let mut best_heuristic = 0;
-    let mut best_valve: String = "".to_string();
-    for (name, distance) in distances {
-        let valve = &valves[name];
-        if valve.flow_rate == 0 || valve.opened || *distance + 1 >= time {
-            continue;
-        }
-        let value = valve.value(*distance, time);
-        if value == 0 {
-            continue;
-        }
+// fn find_best_valve(
+//     valves: &HashMap<String, Valve>,
+//     distances: &HashMap<String, usize>,
+//     time: usize,
+// ) -> String {
+//     let mut best_heuristic = 0;
+//     let mut best_valve: String = "".to_string();
+//     for (name, distance) in distances {
+//         let valve = &valves[name];
+//         if valve.flow_rate == 0 || valve.opened || *distance + 1 >= time {
+//             continue;
+//         }
+//         let value = valve.value(*distance, time);
+//         if value == 0 {
+//             continue;
+//         }
 
-        let heuristic = max(
-            valve.value(0, time) / ((*distance + 1) * (*distance + 1)),
-            1,
-        );
-        println!(
-            "To {} distance is {} min, value: {}, heuristic: {}",
-            name, distance, value, heuristic
-        );
+//         let heuristic = max(
+//             valve.value(0, time) / ((*distance + 1) * (*distance + 1)),
+//             1,
+//         );
+//         println!(
+//             "To {} distance is {} min, value: {}, heuristic: {}",
+//             name, distance, value, heuristic
+//         );
 
-        if heuristic > best_heuristic {
-            best_heuristic = heuristic;
-            best_valve = valve.name.to_string();
-        }
-    }
-    return best_valve;
-}
+//         if heuristic > best_heuristic {
+//             best_heuristic = heuristic;
+//             best_valve = valve.name.to_string();
+//         }
+//     }
+//     return best_valve;
+// }
 
-fn solve_part_one_heuristic(valves: &mut HashMap<String, Valve>) -> usize {
-    let mut current = "AA".to_string();
-    let mut time = 30;
-    let mut total_pressure_released = 0;
-    let mut next_valve = current.to_string();
-    while time > 0 {
-        let (distances, came_from) = a_star_search(&valves, &current);
-        if current == next_valve {
-            next_valve = find_best_valve(&valves, &distances, time);
-        }
-        println!("{} -> {}", current, next_valve);
+// fn solve_part_one_heuristic(valves: &mut HashMap<String, Valve>) -> usize {
+//     let mut current = "AA".to_string();
+//     let mut time = 30;
+//     let mut total_pressure_released = 0;
+//     let mut next_valve = current.to_string();
+//     while time > 0 {
+//         let (distances, came_from) = a_star_search(&valves, &current);
+//         if current == next_valve {
+//             next_valve = find_best_valve(&valves, &distances, time);
+//         }
+//         println!("{} -> {}", current, next_valve);
 
-        if next_valve == "" {
-            total_pressure_released += open_valve(valves, &current, &mut time);
-            break;
-        }
+//         if next_valve == "" {
+//             total_pressure_released += open_valve(valves, &current, &mut time);
+//             break;
+//         }
 
-        let distance = distances[&next_valve];
-        let valve = &valves[&current];
-        let value_of_current = valve.value(0, time);
-        if value_of_current > 0
-            && (current == next_valve
-                || valve.flow_rate * (2 * distance + 1) >= valves[&next_valve].flow_rate)
-        {
-            total_pressure_released += open_valve(valves, &current, &mut time);
-            continue;
-        }
+//         let distance = distances[&next_valve];
+//         let valve = &valves[&current];
+//         let value_of_current = valve.value(0, time);
+//         if value_of_current > 0
+//             && (current == next_valve
+//                 || valve.flow_rate * (2 * distance + 1) >= valves[&next_valve].flow_rate)
+//         {
+//             total_pressure_released += open_valve(valves, &current, &mut time);
+//             continue;
+//         }
 
-        let path = path_from_to(&came_from, &current, &next_valve);
-        if path.len() < 2 {
-            break;
-        }
-        current = (&path[1]).to_string();
-        time -= 1;
-    }
-    return total_pressure_released;
-}
+//         let path = path_from_to(&came_from, &current, &next_valve);
+//         if path.len() < 2 {
+//             break;
+//         }
+//         current = (&path[1]).to_string();
+//         time -= 1;
+//     }
+//     return total_pressure_released;
+// }
 
 pub fn solver() {
     let input = fs::read_to_string("./src/day16/input.txt")
@@ -547,13 +547,13 @@ pub fn solver() {
     //     solve_part_one_heuristic(&mut valves.clone());
     // println!("Heuristic valve search part one: {max_total_pressure_released_part_one_heuristic}");
 
-    // let max_total_pressure_released_part_one = solve_part_one(&valves.clone());
-    // println!("Recursive valve search part one: {max_total_pressure_released_part_one}");
+    let max_total_pressure_released_part_one = solve_part_one(&valves.clone());
+    println!("Recursive valve search part one: {max_total_pressure_released_part_one}");
 
-    // let max_total_pressure_released_part_two = solve_part_two(&valves.clone());
-    // println!("Recursive valve search part two: {max_total_pressure_released_part_two}");
+    let max_total_pressure_released_part_two = solve_part_two(&valves.clone());
+    println!("Recursive valve search part two: {max_total_pressure_released_part_two}");
 
     let (part_one, part_two) = solve_part_two_all_paths(&valves.clone());
-    println!("All path search part one: {part_one}");
+    println!("All path search part one with time 26: {part_one}");
     println!("All path disjunct search part two: {part_two}");
 }
