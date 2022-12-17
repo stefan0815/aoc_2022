@@ -1,5 +1,4 @@
 use std::{
-    cmp::max,
     collections::{HashMap, HashSet},
     fs,
 };
@@ -162,16 +161,6 @@ fn get_cave_height(cave_hashset: &HashSet<Pos>) -> usize {
     return height as usize;
 }
 
-fn get_cave_min_height(cave_hashset: &HashSet<Pos>) -> usize {
-    let mut height = i32::MAX;
-    for pos in cave_hashset {
-        if pos.1 < height {
-            height = pos.1;
-        }
-    }
-    return height as usize;
-}
-
 fn truncate_cave(cave_hashset: &HashSet<Pos>, width: usize) -> (HashSet<Pos>, usize) {
     let mut new_cave_hashset: HashSet<Pos> = HashSet::new();
     let mut height_map: HashMap<i32, i32> = HashMap::new();
@@ -198,19 +187,19 @@ fn truncate_cave(cave_hashset: &HashSet<Pos>, width: usize) -> (HashSet<Pos>, us
     return (new_cave_hashset, max_height_full_row as usize);
 }
 
-fn render_hash(cave_hashset: &HashSet<Pos>, width: usize) {
-    let height = get_cave_height(&cave_hashset);
-    for y in (0..height + 1).rev() {
-        for x in 0..width {
-            if cave_hashset.contains(&Pos(x as i32, y as i32)) {
-                print!("#");
-            } else {
-                print!(".");
-            }
-        }
-        println!();
-    }
-}
+// fn render_hash(cave_hashset: &HashSet<Pos>, width: usize) {
+//     let height = get_cave_height(&cave_hashset);
+//     for y in (0..height + 1).rev() {
+//         for x in 0..width {
+//             if cave_hashset.contains(&Pos(x as i32, y as i32)) {
+//                 print!("#");
+//             } else {
+//                 print!(".");
+//             }
+//         }
+//         println!();
+//     }
+// }
 
 fn solve_part_one(
     cave: &Vec<usize>,
@@ -265,7 +254,7 @@ fn matches_previous_states(
     return (false, 0, 0);
 }
 
-fn solve_fast(cave: &Vec<usize>, jet_pattern: &Vec<char>, num_rocks: usize, width: usize) -> usize {
+fn solve_part_two(cave: &Vec<usize>, jet_pattern: &Vec<char>, num_rocks: usize, width: usize) -> usize {
     let mut cave_hashset = cave_to_hashset(&cave);
     let mut jet_index = 0;
     let mut height = 0;
@@ -273,9 +262,9 @@ fn solve_fast(cave: &Vec<usize>, jet_pattern: &Vec<char>, num_rocks: usize, widt
     let mut states: Vec<(HashSet<Pos>, usize, usize, usize)> = Vec::new();
     let mut i = 0;
     while i < num_rocks{
-        println!("rock: {i}, height: {height}/{overall_height}, cave: {}", cave_hashset.len());
+        // println!("rock: {i}, height: {height}/{overall_height}, cave: {}", cave_hashset.len());
         let truncated_height: usize;
-        let old_height = get_cave_height(&cave_hashset);
+        // let old_height = get_cave_height(&cave_hashset);
         (cave_hashset, truncated_height) = truncate_cave(&cave_hashset, width);
         if truncated_height != 0 {
             overall_height += truncated_height;
@@ -283,12 +272,13 @@ fn solve_fast(cave: &Vec<usize>, jet_pattern: &Vec<char>, num_rocks: usize, widt
             let (matches, stone_skip, height_skip) = matches_previous_states(&states, &new_state);
             states.push(new_state);
             height = get_cave_height(&cave_hashset);
-            println!("Truncated Cave from height {old_height} -> {height}, truncated: {truncated_height}");
+            // println!("Truncated Cave from height {old_height} -> {height}, truncated: {truncated_height}/{overall_height}");
 
             if matches{
                 let skip = (num_rocks - i) / stone_skip;
                 i += skip * stone_skip;
                 overall_height += skip * height_skip;
+                // println!("Skip stone: {}, Skip height: {}", skip * stone_skip, skip * height_skip);
             }
         }
 
@@ -329,13 +319,12 @@ pub fn solver() {
     let jet_pattern: Vec<char> = input.chars().collect();
     let width = 7;
     let cave: Vec<usize> = vec![0; width];
-    // let num_rocks_part_one = 2022;
+    let num_rocks_part_one = 2022;
     let num_rocks_part_two = 1000000000000;
     println!("Day17:");
+    let height_part_one = solve_part_one(&cave, &jet_pattern, num_rocks_part_one, width);
+    println!("Part one: Cave height {height_part_one} after {num_rocks_part_one} rocks");
 
-    // let height_part_one = solve_part_one(&cave, &jet_pattern, num_rocks_part_one, width);
-    // println!("Part one: Cave height {height_part_one} after {num_rocks_part_one}");
-
-    let height_part_two = solve_fast(&cave, &jet_pattern, num_rocks_part_two, width);
-    println!("Part one: Cave height {height_part_two} after {num_rocks_part_two}");
+    let height_part_two = solve_part_two(&cave, &jet_pattern, num_rocks_part_two, width);
+    println!("Part two: Cave height {height_part_two} after {num_rocks_part_two} rocks");
 }
