@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fs};
+use std::{collections::{HashMap, VecDeque}, fs, cmp::max};
 
 #[derive(Clone, PartialEq, Eq, Hash)]
 struct Valve {
@@ -33,15 +33,15 @@ fn a_star_search(
     start: &String, /*,
                     end: &String,*/
 ) -> (HashMap<String, usize>, HashMap<String, String>) {
-    let mut frontier: Vec<Valve> = Vec::new();
+    let mut frontier: VecDeque<Valve> = VecDeque::new();
     let mut cost_so_far: HashMap<String, usize> = HashMap::new();
     let mut came_from: HashMap<String, String> = HashMap::new();
     came_from.insert(start.to_string(), start.to_string());
     cost_so_far.insert(start.to_string(), 0);
-    frontier.push(valves[start].clone());
+    frontier.push_back(valves[start].clone());
 
     while !frontier.is_empty() {
-        let current = frontier.pop().unwrap();
+        let current = frontier.pop_front().unwrap();
         let current_name = current.name.to_string();
 
         // if current_name == *end { //we do not have a priority queue as we can not estimate distance therfore all paths have to be searched
@@ -52,7 +52,7 @@ fn a_star_search(
             let new_cost = cost_so_far.get(&current_name.to_string()).unwrap() + 1;
             if !cost_so_far.contains_key(&next) || new_cost < cost_so_far[&next] {
                 cost_so_far.insert(next.to_string(), new_cost);
-                frontier.push(valves[&next].clone());
+                frontier.push_back(valves[&next].clone());
                 came_from.insert(next.to_string(), current_name.to_string());
             }
         }
@@ -97,25 +97,25 @@ fn get_remaining_valves_sorted(
     return valve_values;
 }
 
-fn get_available_pressure_release(valves: &HashMap<String, Valve>, time: usize) -> i32 {
+fn get_available_pressure_release(valves: &HashMap<String, Valve>, time: usize) -> usize {
     let mut accumulated_value = 0;
     for (_, valve) in valves {
         accumulated_value += valve.value(0, time);
     }
-    return accumulated_value as i32;
+    return accumulated_value;
 }
 
 fn solve_part_one_step(
-    valves: &mut HashMap<String, Valve>,
+    valves: &HashMap<String, Valve>,
     current: &String,
     time: usize,
-    early_break_limit: i32,
+    early_break_limit: usize,
     limit: usize,
     depth: usize,
 ) -> (usize, Vec<String>) {
     let releasable_pressure = get_available_pressure_release(&valves, time);
     // println!("{releasable_pressure}/{early_break_limit}");
-    if releasable_pressure < early_break_limit {
+    if releasable_pressure <= early_break_limit {
         return (0, [].to_vec());
     }
     // println!("{}, {}", time, depth);
@@ -130,18 +130,24 @@ fn solve_part_one_step(
         let mut new_valves = valves.clone();
         let mut new_time = time - distances[&new_valve.to_string()];
         let pressure_valve = open_valve(&mut new_valves, new_valve, &mut new_time);
+        // let path_from_to = path_from_to(&came_from, &current, &new_valve);
+        // println!("From {current} to {new_valve} distance: {}", distances[&new_valve.to_string()]);
+        // for node in path_from_to{
+        //     print!("{node},");
+        // }
+        // println!();
         // println!("Distance: {}, Open valve: {new_valve}, releasing pressure: {pressure}, new_time: {new_time}",  distances[&new_valve.to_string()]);
         let (pressure, mut opened_valves) = solve_part_one_step(
             &mut new_valves.clone(),
-            &new_valve,
-            new_time,
-            early_break_limit - pressure_valve as i32,
+            &new_valve.to_string(),
+            new_time.clone(),
+            max(0, early_break_limit as i32 - pressure_valve as i32) as usize,
             limit,
             depth + 1,
         );
         if pressure + pressure_valve > pressure_release_max {
             pressure_release_max = pressure + pressure_valve;
-            opened_valves_max = Vec::new();
+            opened_valves_max.clear();
             opened_valves_max.push(new_valve.to_string());
             opened_valves_max.append(&mut opened_valves);
         }
@@ -177,7 +183,7 @@ pub fn solver() {
             // print!("{tunnel}, ");
             tunnels.push(tunnel.to_string());
         }
-        println!();
+        // println!();
         valves.insert(
             name.to_string(),
             Valve {
@@ -192,7 +198,7 @@ pub fn solver() {
     let time = 30;
     let mut early_break_limit = 0;
     let mut max_total_pressure_released = 0;
-    for limit in [1, 3, 5, 7, 9, 0] {
+    for limit in [1, 3, 7, 0] {
         let (total_pressure_released, _) = solve_part_one_step(
             &mut valves,
             &start.to_string(),
@@ -203,7 +209,7 @@ pub fn solver() {
         );
         if total_pressure_released > max_total_pressure_released {
             max_total_pressure_released = total_pressure_released;
-            early_break_limit = total_pressure_released as i32;
+            early_break_limit = total_pressure_released;
         }
         println!("total_pressure_released: {total_pressure_released} with early_break_limit: {early_break_limit} and limit: {limit}");
         // for valve in &opened_valves {
