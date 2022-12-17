@@ -90,7 +90,7 @@ fn get_remaining_valves_sorted(
         //distance
     }
     valve_values.sort_by(|a, b| a.1.cmp(&b.1));
-    // valve_values.reverse();
+    valve_values.reverse();
     if limit != 0 && valve_values.len() > limit {
         return valve_values[..limit].to_vec();
     }
