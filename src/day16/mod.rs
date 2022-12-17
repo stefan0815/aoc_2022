@@ -303,7 +303,7 @@ fn solve_part_two(valves: &HashMap<String, Valve>) -> usize {
             early_break_limit = total_pressure_released;
             early_break_limit_elephant = total_pressure_released_elephant;
         }
-        println!("total_pressure_released: {total_pressure_released} with early_break_limit: {early_break_limit}/{early_break_limit_elephant} and limit: {limit}");
+        println!("total_pressure_released: {max_total_pressure_released} with early_break_limit: {early_break_limit}/{early_break_limit_elephant} and limit: {limit}");
         // for valve in &opened_valves {
         //     println!("Opened: {valve}");
         // }
