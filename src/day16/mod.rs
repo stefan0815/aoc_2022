@@ -154,6 +154,163 @@ fn solve_part_one_step(
     return (pressure_release_max, opened_valves_max);
 }
 
+fn solve_part_two_step(
+    valves: &HashMap<String, Valve>,
+    current: &String,
+    current_elephant: &String,
+    time: usize,
+    time_elephant: usize,
+    early_break_limit: usize,
+    early_break_limit_elephant: usize,
+    limit: usize,
+    depth: usize,
+) -> (usize, usize, Vec<String>, Vec<String>) {
+    let releasable_pressure = get_available_pressure_release(&valves, time);
+    if releasable_pressure <= early_break_limit && releasable_pressure <= early_break_limit_elephant
+    {
+        return (0, 0, [].to_vec(), [].to_vec());
+    }
+    if releasable_pressure <= early_break_limit {
+        let (pressure, opened_valves_elephant) = solve_part_one_step(
+            &mut valves.clone(),
+            &current_elephant.to_string(),
+            time_elephant.clone(),
+            early_break_limit_elephant.clone(),
+            limit,
+            depth + 1,
+        );
+        return (0, pressure, [].to_vec(), opened_valves_elephant);
+    }
+
+    if releasable_pressure <= early_break_limit_elephant {
+        let (pressure, opened_valves) = solve_part_one_step(
+            &mut valves.clone(),
+            &current.to_string(),
+            time.clone(),
+            early_break_limit.clone(),
+            limit,
+            depth + 1,
+        );
+        return (pressure, 0, opened_valves, [].to_vec());
+    }
+
+    let (distances, _) = a_star_search(&valves, &current);
+    let (distances_elephant, _) = a_star_search(&valves, &current_elephant);
+    let remaining_valves = get_remaining_valves_sorted(&valves, &distances, time, limit);
+    let remaining_valves_elephant =
+        get_remaining_valves_sorted(&valves, &distances_elephant, time_elephant, limit);
+    let mut pressure_release_max = 0;
+    let mut pressure_release_elephant_max = 0;
+    let mut opened_valves_max: Vec<String> = Vec::new();
+    let mut opened_valves_elephant_max: Vec<String> = Vec::new();
+    for (new_valve, _) in &remaining_valves {
+        for (new_valve_elephant, _) in &remaining_valves_elephant {
+            if new_valve == new_valve_elephant {
+                continue;
+            }
+
+            let mut new_valves = valves.clone();
+
+            let mut new_time = time - distances[&new_valve.to_string()];
+            let mut new_time_elephant =
+                time_elephant - distances_elephant[&new_valve_elephant.to_string()];
+
+            let pressure_valve = open_valve(&mut new_valves, new_valve, &mut new_time);
+            let pressure_valve_elephant =
+                open_valve(&mut new_valves, new_valve_elephant, &mut new_time_elephant);
+            let (pressure, pressure_elephant, mut opened_valves, mut opened_valves_elephant) = solve_part_two_step(
+                &mut new_valves.clone(),
+                &new_valve.to_string(),
+                &new_valve_elephant.to_string(),
+                new_time.clone(),
+                new_time_elephant.clone(),
+                max(0, early_break_limit as i32 - pressure_valve as i32) as usize,
+                max(
+                    0,
+                    early_break_limit_elephant as i32 - pressure_valve_elephant as i32,
+                ) as usize,
+                limit,
+                depth + 1,
+            );
+            if pressure + pressure_elephant+ pressure_valve + pressure_valve_elephant > pressure_release_max + pressure_release_elephant_max {
+                pressure_release_max = pressure + pressure_valve;
+                pressure_release_elephant_max = pressure_elephant + pressure_valve_elephant;
+
+                opened_valves_max.clear();
+                opened_valves_max.push(new_valve.to_string());
+                opened_valves_max.append(&mut opened_valves);
+                opened_valves_elephant_max.clear();
+                opened_valves_elephant_max.push(new_valve_elephant.to_string());
+                opened_valves_elephant_max.append(&mut opened_valves_elephant);
+            }
+        }
+    }
+
+    return (
+        pressure_release_max,
+        pressure_release_elephant_max,
+        opened_valves_max,
+        opened_valves_elephant_max,
+    );
+}
+
+fn solve_part_one(valves: &HashMap<String, Valve>) -> usize {
+    let start = "AA".to_string();
+    let time = 30;
+    let mut early_break_limit = 0;
+    let mut max_total_pressure_released = 0;
+    for limit in [1, 3, 7, 0] {
+        let (total_pressure_released, _) = solve_part_one_step(
+            &mut valves.clone(),
+            &start.to_string(),
+            time,
+            early_break_limit,
+            limit,
+            0,
+        );
+        if total_pressure_released > max_total_pressure_released {
+            max_total_pressure_released = total_pressure_released;
+            early_break_limit = total_pressure_released;
+        }
+        println!("total_pressure_released: {total_pressure_released} with early_break_limit: {early_break_limit} and limit: {limit}");
+        // for valve in &opened_valves {
+        //     println!("Opened: {valve}");
+        // }
+    }
+    return max_total_pressure_released;
+}
+
+fn solve_part_two(valves: &HashMap<String, Valve>) -> usize {
+    let start = "AA".to_string();
+    let time = 26;
+    let mut early_break_limit = 0;
+    let mut early_break_limit_elephant = 0;
+    let mut max_total_pressure_released = 0;
+    for limit in [2, 5, 9, 0] {
+        let (total_pressure_released, total_pressure_released_elephant, _, _) = solve_part_two_step(
+            &mut valves.clone(),
+            &start.to_string(),
+            &start.to_string(),
+            time,
+            time,
+            early_break_limit,
+            early_break_limit,
+            limit,
+            0,
+        );
+        if total_pressure_released + total_pressure_released_elephant > max_total_pressure_released {
+            max_total_pressure_released = total_pressure_released + total_pressure_released_elephant;
+            early_break_limit = total_pressure_released;
+            early_break_limit_elephant = total_pressure_released_elephant;
+        }
+        println!("total_pressure_released: {total_pressure_released} with early_break_limit: {early_break_limit}/{early_break_limit_elephant} and limit: {limit}");
+        // for valve in &opened_valves {
+        //     println!("Opened: {valve}");
+        // }
+    }
+    return max_total_pressure_released;
+}
+
 pub fn solver() {
     let input = fs::read_to_string("./src/day16/input.txt")
         .expect("Should have been able to read the file");
@@ -190,29 +347,10 @@ pub fn solver() {
         );
     }
 
-    let time = 30;
-    let mut early_break_limit = 0;
-    let mut max_total_pressure_released = 0;
-    let start = "AA".to_string();
-    for limit in [1, 3, 7, 0] {
-        let (total_pressure_released, _) = solve_part_one_step(
-            &mut valves,
-            &start.to_string(),
-            time,
-            early_break_limit,
-            limit,
-            0,
-        );
-        if total_pressure_released > max_total_pressure_released {
-            max_total_pressure_released = total_pressure_released;
-            early_break_limit = total_pressure_released;
-        }
-        println!("total_pressure_released: {total_pressure_released} with early_break_limit: {early_break_limit} and limit: {limit}");
-        // for valve in &opened_valves {
-        //     println!("Opened: {valve}");
-        // }
-    }
-
     println!("Day16:");
-    println!("Recursive valve search: {max_total_pressure_released}");
+    // let max_total_pressure_released_part_one = solve_part_one(&valves.clone());
+    // println!("Recursive valve search part one: {max_total_pressure_released_part_one}");
+
+    let max_total_pressure_released_part_two = solve_part_two(&valves.clone());
+    println!("Recursive valve search part two: {max_total_pressure_released_part_two}");
 }
