@@ -293,8 +293,10 @@ fn solve_part_two(valves: &HashMap<String, Valve>) -> usize {
             limit,
             0,
         );
-        if total_pressure_released + total_pressure_released_elephant > max_total_pressure_released {
-            max_total_pressure_released = total_pressure_released + total_pressure_released_elephant;
+        if total_pressure_released + total_pressure_released_elephant > max_total_pressure_released
+        {
+            max_total_pressure_released =
+                total_pressure_released + total_pressure_released_elephant;
             early_break_limit = total_pressure_released + total_pressure_released_elephant;
         }
         println!("total_pressure_released: {max_total_pressure_released} with early_break_limit: {early_break_limit} and limit: {limit}");
@@ -303,6 +305,119 @@ fn solve_part_two(valves: &HashMap<String, Valve>) -> usize {
         // }
     }
     return max_total_pressure_released;
+}
+
+fn get_all_paths_single_walker(
+    valves: &HashMap<String, Valve>,
+    current: &String,
+    time: usize,
+    limit: usize,
+    depth: usize,
+) -> Vec<(usize, Vec<String>)> {
+    // println!("{}, {}", time, depth);
+    let (distances, _) = a_star_search(&valves, &current);
+    // for (new_node, dist) in &distances{
+    //     println!("Distance from: {current} to {new_node} is {dist}min");
+    // }
+    let remaining_valves = get_remaining_valves_sorted(&valves, &distances, time, limit);
+    let mut all_paths: Vec<(usize, Vec<String>)> = Vec::new();
+    for (new_valve, _) in &remaining_valves {
+        let mut new_valves = valves.clone();
+        let mut new_time = time - distances[&new_valve.to_string()];
+        let pressure_valve = open_valve(&mut new_valves, new_valve, &mut new_time);
+        // let path_from_to = path_from_to(&came_from, &current, &new_valve);
+        // println!("From {current} to {new_valve} distance: {}", distances[&new_valve.to_string()]);
+        // for node in path_from_to{
+        //     print!("{node},");
+        // }
+        // println!();
+        // println!("Distance: {}, Open valve: {new_valve}, releasing pressure: {pressure_valve}, new_time: {new_time}",  distances[&new_valve.to_string()]);
+
+        let results = get_all_paths_single_walker(
+            &mut new_valves.clone(),
+            &new_valve.to_string(),
+            new_time.clone(),
+            limit,
+            depth + 1,
+        );
+
+        let initial_step: (usize, Vec<String>) = (pressure_valve, vec![new_valve.to_string()]);
+        if results.len() == 0 {
+            all_paths.push(initial_step.clone());
+        }
+        for result in results {
+            let mut this_step = initial_step.clone();
+            this_step.0 += result.0;
+            this_step.1.append(&mut result.1.clone());
+            all_paths.push(this_step);
+        }
+    }
+    // println!("{}", all_paths.len());
+    return all_paths;
+}
+
+fn are_paths_disjunct(path_one: &Vec<String>, path_two: &Vec<String>) -> bool {
+    for node_one in path_one.clone() {
+        for node_two in path_two.clone() {
+            if node_one == node_two {
+                return false;
+            }
+        }
+    }
+    return true;
+}
+fn find_disjunct_paths_with_max_value(all_paths: Vec<(usize, Vec<String>)>) -> usize {
+    let mut max_pressure = 0;
+    println!("All paths length: {}", all_paths.len());
+    for (pressure_one, path_one) in all_paths.clone() {
+        for (pressure_two, path_two) in all_paths.clone() {
+            if are_paths_disjunct(&path_one, &path_two) {
+                let pressure = pressure_one + pressure_two;
+                if pressure > max_pressure {
+                    max_pressure = pressure;
+                }
+            }
+        }
+    }
+    return max_pressure;
+}
+
+fn solve_part_two_all_paths(valves: &HashMap<String, Valve>) -> (usize, usize) {
+    let start = "AA".to_string();
+    let time = 26;
+    let mut max_total_pressure_released = 0;
+    let mut max_total_pressure_released_part_two = 0;
+    for limit in [2, 3, 5, 7, 0] {
+        let all_paths =
+            get_all_paths_single_walker(&mut valves.clone(), &start.to_string(), time, limit, 0);
+        let mut max_pressure_release_path = 0;
+        // let mut best_path: Vec<String> = Vec::new();
+        for (pressure_release, _) in &all_paths {
+            if *pressure_release > max_pressure_release_path {
+                max_pressure_release_path = *pressure_release;
+                // best_path = path.to_vec();
+            }
+        }
+
+        // for node in &best_path {
+        //     print!("{node} -> ");
+        // }
+
+        if max_pressure_release_path > max_total_pressure_released {
+            max_total_pressure_released = max_pressure_release_path;
+        }
+        println!("Limit: {limit}, pressure_part_one: {max_pressure_release_path}");
+        let max_pressure_release_path_part_two = find_disjunct_paths_with_max_value(all_paths);
+        if max_pressure_release_path_part_two > max_total_pressure_released_part_two {
+            max_total_pressure_released_part_two = max_pressure_release_path_part_two;
+        }
+        println!("Limit: {limit}, pressure_part_two {max_pressure_release_path_part_two}");
+    }
+
+    return (
+        max_total_pressure_released,
+        max_total_pressure_released_part_two,
+    );
 }
 
 fn find_best_valve(
@@ -421,6 +536,10 @@ pub fn solver() {
     // let max_total_pressure_released_part_one = solve_part_one(&valves.clone());
     // println!("Recursive valve search part one: {max_total_pressure_released_part_one}");
 
-    let max_total_pressure_released_part_two = solve_part_two(&valves.clone());
-    println!("Recursive valve search part two: {max_total_pressure_released_part_two}");
+    // let max_total_pressure_released_part_two = solve_part_two(&valves.clone());
+    // println!("Recursive valve search part two: {max_total_pressure_released_part_two}");
+
+    let (part_one, part_two) = solve_part_two_all_paths(&valves.clone());
+    println!("All path search part one: {part_one}");
+    println!("All path disjunct search part two: {part_two}");
 }
