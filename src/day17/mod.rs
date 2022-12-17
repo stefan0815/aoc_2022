@@ -133,6 +133,7 @@ fn merge_rock_with_cave(
     let rock: Vec<usize> = hashset_to_cave(rock_hashset, width);
 
     for i in 0..width {
+        println!("Col: {i}, Cave: {}, Rock: {}", cave[i], rock[i]);
         cave[i] = max(cave[i], rock[i]);
     }
 
@@ -146,11 +147,10 @@ pub fn solver() {
     let width = 7;
     let mut cave: Vec<usize> = vec![0; width];
 
-    let num_rocks = 2;
+    let num_rocks = 1;
     let mut jet_index = 0;
     let mut height = 0;
     for i in 0..num_rocks {
-        height = *cave.iter().max().unwrap();
         let mut rock = shape(i % 5, height as i32);
         let cave_hashset = cave_to_hashset(&cave);
         loop {
@@ -165,8 +165,11 @@ pub fn solver() {
                 rock = rock_down;
             } else {
                 println!("intersection");
-
+                for pos in &rock{
+                    println!("Pos: {},{}", pos.0,pos.1);
+                }
                 cave = merge_rock_with_cave(&cave_hashset, &rock, width);
+                height = *cave.iter().max().unwrap();
                 break;
             }
         }
