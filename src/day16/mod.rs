@@ -160,13 +160,10 @@ pub fn solver() {
     let values_and_paths: Vec<&str> = input.split("\r\n").collect();
 
     let mut valves: HashMap<String, Valve> = HashMap::new();
-    let mut start = "";
+
     for valvue_and_path in values_and_paths {
         let split: Vec<&str> = valvue_and_path[6..].split(" has flow rate=").collect();
         let name = split[0];
-        if start == "" {
-            start = name;
-        }
         let mut split_at = "; tunnel leads to valve ";
         if split[1].contains("tunnels") {
             split_at = "; tunnels lead to valves "
@@ -196,6 +193,7 @@ pub fn solver() {
     let time = 30;
     let mut early_break_limit = 0;
     let mut max_total_pressure_released = 0;
+    let start = "AA".to_string();
     for limit in [1, 3, 7, 0] {
         let (total_pressure_released, _) = solve_part_one_step(
             &mut valves,
