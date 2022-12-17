@@ -60,11 +60,11 @@ fn shape_five(height: i32) -> HashSet<Pos> {
 
 fn shape(shape_type: usize, height: i32) -> HashSet<Pos> {
     match shape_type {
-        0 => return shape_one(height),
-        1 => return shape_two(height),
-        2 => return shape_three(height),
-        3 => return shape_four(height),
-        4 => return shape_five(height),
+        0 => return shape_one(height + 1),
+        1 => return shape_two(height + 1),
+        2 => return shape_three(height + 1),
+        3 => return shape_four(height + 1),
+        4 => return shape_five(height + 1),
         _ => panic!("Shape not available"),
     }
 }
@@ -115,29 +115,61 @@ fn cave_to_hashset(cave: &Vec<usize>) -> HashSet<Pos> {
     return cave_hashset;
 }
 
-fn hashset_to_cave(cave_hashset: &HashSet<Pos>, width: usize) -> Vec<usize> {
-    let mut cave: Vec<usize> = vec![0; width];
+// fn hashset_to_cave(cave_hashset: &HashSet<Pos>, width: usize) -> Vec<usize> {
+//     let mut cave: Vec<usize> = vec![0; width];
 
-    for pos in cave_hashset {
-        cave[pos.0 as usize] = pos.1 as usize;
-    }
-    return cave;
+//     for pos in cave_hashset {
+//         cave[pos.0 as usize] = max(cave[pos.0 as usize], pos.1 as usize);
+//     }
+//     return cave;
+// }
+
+// fn merge_rock_with_cave(
+//     cave_hashset: &HashSet<Pos>,
+//     rock_hashset: &HashSet<Pos>,
+//     width: usize,
+// ) -> Vec<usize> {
+//     let mut cave: Vec<usize> = hashset_to_cave(cave_hashset, width);
+//     let rock: Vec<usize> = hashset_to_cave(rock_hashset, width);
+
+//     for i in 0..width {
+//         // println!("Col: {i}, Cave: {}, Rock: {}", cave[i], rock[i]);
+//         cave[i] = max(cave[i], rock[i]);
+//     }
+
+//     return cave;
+// }
+
+fn merge_rock_with_cave(cave_hashset: &HashSet<Pos>, rock_hashset: &HashSet<Pos>) -> HashSet<Pos> {
+    return HashSet::from_iter(cave_hashset.union(&rock_hashset).cloned());
 }
 
-fn merge_rock_with_cave(
-    cave_hashset: &HashSet<Pos>,
-    rock_hashset: &HashSet<Pos>,
-    width: usize,
-) -> Vec<usize> {
-    let mut cave: Vec<usize> = hashset_to_cave(cave_hashset, width);
-    let rock: Vec<usize> = hashset_to_cave(rock_hashset, width);
+fn check_collision(cave_hashset: &HashSet<Pos>, rock_hashset: &HashSet<Pos>) -> bool {
+    return cave_hashset.intersection(&rock_hashset).count() != 0;
+}
 
-    for i in 0..width {
-        println!("Col: {i}, Cave: {}, Rock: {}", cave[i], rock[i]);
-        cave[i] = max(cave[i], rock[i]);
+fn get_cave_height(cave_hashset: &HashSet<Pos>) -> usize {
+    let mut height = 0;
+    for pos in cave_hashset {
+        if pos.1 > height {
+            height = pos.1;
+        }
     }
+    return height as usize;
+}
 
-    return cave;
+fn render_hash(cave_hashset: &HashSet<Pos>, width: usize) {
+    let height = get_cave_height(&cave_hashset);
+    for y in (0..height + 1).rev() {
+        for x in 0..width {
+            if cave_hashset.contains(&Pos(x as i32,y as i32)){
+                print!("#");
+            }else {
+                print!(".");
+            }
+        }
+        println!();
+    }
 }
 
 pub fn solver() {
@@ -145,35 +177,38 @@ pub fn solver() {
         .expect("Should have been able to read the file");
     let jet_pattern: Vec<char> = input.chars().collect();
     let width = 7;
-    let mut cave: Vec<usize> = vec![0; width];
-
-    let num_rocks = 1;
+    let cave: Vec<usize> = vec![0; width];
+    let mut cave_hashset = cave_to_hashset(&cave);
+    let num_rocks = 2022;
     let mut jet_index = 0;
     let mut height = 0;
     for i in 0..num_rocks {
+        println!("rock: {i}, height: {height}");
         let mut rock = shape(i % 5, height as i32);
-        let cave_hashset = cave_to_hashset(&cave);
+        // println!("new Rock Shape:{}: ", i%5);
+        // for pos in &rock{
+        //     println!("Pos: {},{}", pos.0,pos.1);
+        // }
         loop {
             let jet = jet_pattern[jet_index];
             jet_index = (jet_index + 1) % jet_pattern.len();
-            rock = move_rock(&rock, jet, width);
+            // println!("Move: {jet}");
+            let rock_move = move_rock(&rock, jet, width);
+            let collision = check_collision(&cave_hashset, &rock_move);
+            if !collision {
+                rock = rock_move;
+            }
             let rock_down = move_rock_down(&rock);
-            let no_intersection = cave_hashset.intersection(&rock_down).count() == 0;
-            if no_intersection {
-                println!("no intersection");
-
-                rock = rock_down;
-            } else {
-                println!("intersection");
-                for pos in &rock{
-                    println!("Pos: {},{}", pos.0,pos.1);
-                }
-                cave = merge_rock_with_cave(&cave_hashset, &rock, width);
-                height = *cave.iter().max().unwrap();
+            let collision = check_collision(&cave_hashset, &rock_down);
+            if collision {
+                cave_hashset = merge_rock_with_cave(&cave_hashset, &rock);
+                height = get_cave_height(&cave_hashset);
                 break;
             }
+            rock = rock_down;
         }
     }
+    // render_hash(&cave_hashset, width);
     println!("Day17:");
     println!("Part one: Cave height {height} after {num_rocks}");
 }
