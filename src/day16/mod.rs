@@ -16,7 +16,7 @@ fn open_valve(valves: &mut HashMap<String, Valve>, valve: &String, time: &mut us
     if valves[valve].opened {
         return 0;
     }
-    println!("Open valve: {valve}");
+    // println!("Open valve: {valve}");
     *time -= 1;
     let value = valves[valve].flow_rate * *time;
     valves.get_mut(valve).unwrap().opened = true;
@@ -303,8 +303,14 @@ fn find_best_valve(
             continue;
         }
 
-        let heuristic = max( valve.value(0, time) / ((*distance + 1) * (*distance + 1)), 1 );
-        println!("To {} distance is {} min, value: {}, heuristic: {}", name, distance, value, heuristic);
+        let heuristic = max(
+            valve.value(0, time) / ((*distance + 1) * (*distance + 1)),
+            1,
+        );
+        println!(
+            "To {} distance is {} min, value: {}, heuristic: {}",
+            name, distance, value, heuristic
+        );
 
         if heuristic > best_heuristic {
             best_heuristic = heuristic;
@@ -335,7 +341,8 @@ fn solve_part_one_heuristic(valves: &mut HashMap<String, Valve>) -> usize {
         let valve = &valves[&current];
         let value_of_current = valve.value(0, time);
         if value_of_current > 0
-            && (current == next_valve || valve.flow_rate * (2 * distance + 1) >= valves[&next_valve].flow_rate)
+            && (current == next_valve
+                || valve.flow_rate * (2 * distance + 1) >= valves[&next_valve].flow_rate)
         {
             total_pressure_released += open_valve(valves, &current, &mut time);
             continue;
