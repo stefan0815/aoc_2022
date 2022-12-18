@@ -72,24 +72,34 @@ fn get_bounding_box(cubes: &HashMap<(i32, i32, i32), i32>) -> (i32, i32, i32, i3
     return bounding_box;
 }
 
+fn add_ray(reachable: &mut HashSet<(i32, i32, i32)>, ray:Vec<(i32, i32, i32)>){
+    for pos in ray{
+        reachable.insert(pos);
+    }
+}
+
 fn is_reachable_in_direction(
     cubes: &HashMap<(i32, i32, i32), i32>,
-    reachable: &HashSet<(i32, i32, i32)>,
+    reachable: &mut HashSet<(i32, i32, i32)>,
     pos: &(i32, i32, i32),
     bounding_box: &(i32, i32, i32, i32, i32, i32),
     dir: &Direction,
 ) -> bool {
     let mut new_pos = pos.clone();
+    let mut ray: Vec<(i32, i32, i32)> = Vec::new();
     loop {
         new_pos = move_pos(&new_pos, &dir);
+        ray.push(new_pos);
         if cubes.contains_key(&new_pos) {
             return false;
         }
         if reachable.contains(&new_pos) {
+            add_ray(reachable,ray);
             return true;
         }
         if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
             // print_pos("is not trapped: ", pos);
+            add_ray(reachable,ray);
             return true;
         }
     }
@@ -97,7 +107,7 @@ fn is_reachable_in_direction(
 
 fn is_trapped(
     cubes: &HashMap<(i32, i32, i32), i32>,
-    reachable: &HashSet<(i32, i32, i32)>,
+    reachable: &mut HashSet<(i32, i32, i32)>,
     pos: &(i32, i32, i32),
     bounding_box: &(i32, i32, i32, i32, i32, i32),
 ) -> bool {
@@ -134,7 +144,7 @@ fn get_trapped_air_one_bounce(
                 if reachable.contains(&pos) {
                     continue;
                 };
-                if is_trapped(&cubes, &reachable, &pos, &bounding_box) {
+                if is_trapped(&cubes, reachable, &pos, &bounding_box) {
                     insert_pos(&mut trapped_air, &pos);
                 } else {
                     reachable.insert(pos);
@@ -151,7 +161,7 @@ fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, 
     let mut reachable_air = HashSet::new();
     loop {
         let new_trapped_air = get_trapped_air_one_bounce(cubes, &mut reachable_air, &bounding_box);
-
+        // println!("Surface: {}", get_total_surface(&new_trapped_air));
         if new_trapped_air == trapped_air {
             return trapped_air;
         }
