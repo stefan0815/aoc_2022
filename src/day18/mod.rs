@@ -103,6 +103,25 @@ fn move_pos(pos: &(i32, i32, i32), dir: &Direction) -> (i32, i32, i32) {
     }
 }
 
+fn is_reachable_in_direction(
+    cubes: &HashMap<(i32, i32, i32), i32>,
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+    dir: &Direction,
+) -> bool {
+    let mut new_pos = pos.clone();
+    loop {
+        new_pos = move_pos(&new_pos, &dir);
+        if cubes.contains_key(&new_pos) {
+            return false;
+        }
+        if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
+            // print_pos("is not trapped: ", pos);
+            return true;
+        }
+    }
+}
+
 fn is_trapped(
     cubes: &HashMap<(i32, i32, i32), i32>,
     pos: &(i32, i32, i32),
@@ -116,20 +135,42 @@ fn is_trapped(
         Direction::Forward,
         Direction::Back,
     ] {
-        let mut new_pos = pos.clone();
-        loop {
-            new_pos = move_pos(&new_pos, &dir);
-            if cubes.contains_key(&new_pos) {
-                break;
-            }
-            if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
-                // print_pos("is not trapped: ", pos);
-                return false;
-            }
+        if is_reachable_in_direction(cubes, pos, bounding_box, &dir){
+            return false;
         }
     }
     // print_pos("is trapped: ", pos);
     return true;
+}
+
+fn reachable_surface(
+    cubes: &HashMap<(i32, i32, i32), i32>,
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+) -> i32 {
+    let mut reachable_surface = 0;
+    for dir in [
+        Direction::Left,
+        Direction::Right,
+        Direction::Down,
+        Direction::Up,
+        Direction::Forward,
+        Direction::Back,
+    ] {
+        if is_reachable_in_direction(cubes, pos, bounding_box, &dir){
+            reachable_surface += 1;
+        }
+    }
+    return reachable_surface;
+}
+
+fn get_reachable_surface(cubes: &HashMap<(i32, i32, i32), i32>) -> i32 {
+    let mut total_reachable_surface = 0;
+    let bounding_box = get_bounding_box(cubes);
+    for (pos, _) in cubes {
+        total_reachable_surface += reachable_surface(&cubes,&pos, &bounding_box);
+    }
+    return total_reachable_surface;
 }
 
 fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
@@ -182,21 +223,16 @@ pub fn solver() {
         let pos = (position[0], position[1], position[2]);
         insert_pos(&mut cubes, &pos);
     }
-    
+
     println!("Day18:");
     let total_surface = get_total_surface(&cubes);
     println!("Part one: Surface: {total_surface}");
 
     let trapped_air = get_trapped_air(&cubes);
     let trapped_air_surface = get_total_surface(&trapped_air);
-
-    // let mut new_cubes = cubes.clone();
-    // for _ in 0..10 {
-    //     let trapped = get_trapped_air(&new_cubes, limit);
-    //     println!("{}", get_total_surface(&trapped));
-    //     new_cubes = trapped;
-    // }
-
     let total_surface_part_two = total_surface - trapped_air_surface;
-    println!("Part two: Exterior Surface: {}", total_surface_part_two);
+    println!("Part two: Exterior Surface trapped air approach: {}", total_surface_part_two);
+
+    let total_reachable_surface_part_two = get_reachable_surface(&cubes);
+    println!("Part two: Reachable Surface : {}", total_reachable_surface_part_two);
 }
