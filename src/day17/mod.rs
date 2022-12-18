@@ -325,8 +325,11 @@ fn solve_part_two(
 
         // let (stone_skip, height_skip) =
         //     check_pattern(&mut patterns, i, jet_index, height, num_rocks);
+        // if stone_skip > 0 {
         // i += stone_skip;
         // overall_height += height_skip;
+        // continue;
+        // }
 
         let truncated_height: usize;
         // let old_height = get_cave_height(&cave_hashset);
@@ -344,6 +347,7 @@ fn solve_part_two(
                 i += skip * stone_skip;
                 overall_height += skip * height_skip;
                 // println!("Skip stone: {}, Skip height: {}", skip * stone_skip, skip * height_skip);
+                continue;
             }
         }
 
