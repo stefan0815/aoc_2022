@@ -17,21 +17,5 @@ pub mod day16;
 pub mod day17;
 
 fn main() {
-    // day1::solver();
-    // day2::solver();
-    // day3::solver();
-    // day4::solver();
-    // day5::solver();
-    // day6::solver();
-    // day7::solver();
-    // day8::solver();
-    // day9::solver();
-    // day10::solver();
-    // day11::solver();
-    // day12::solver();
-    // day13::solver();
-    // day14::solver();
-    // day15::solver();
-    // day16::solver();
     day17::solver();
 }
