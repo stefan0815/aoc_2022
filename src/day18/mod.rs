@@ -72,8 +72,8 @@ fn get_bounding_box(cubes: &HashMap<(i32, i32, i32), i32>) -> (i32, i32, i32, i3
     return bounding_box;
 }
 
-fn add_ray(reachable: &mut HashSet<(i32, i32, i32)>, ray:Vec<(i32, i32, i32)>){
-    for pos in ray{
+fn add_ray(reachable: &mut HashSet<(i32, i32, i32)>, ray: Vec<(i32, i32, i32)>) {
+    for pos in ray {
         reachable.insert(pos);
     }
 }
@@ -87,6 +87,7 @@ fn is_reachable_in_direction(
 ) -> bool {
     let mut new_pos = pos.clone();
     let mut ray: Vec<(i32, i32, i32)> = Vec::new();
+    ray.push(new_pos);
     loop {
         new_pos = move_pos(&new_pos, &dir);
         ray.push(new_pos);
@@ -94,12 +95,12 @@ fn is_reachable_in_direction(
             return false;
         }
         if reachable.contains(&new_pos) {
-            add_ray(reachable,ray);
+            add_ray(reachable, ray);
             return true;
         }
         if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
             // print_pos("is not trapped: ", pos);
-            add_ray(reachable,ray);
+            add_ray(reachable, ray);
             return true;
         }
     }
@@ -146,8 +147,6 @@ fn get_trapped_air_one_bounce(
                 };
                 if is_trapped(&cubes, reachable, &pos, &bounding_box) {
                     insert_pos(&mut trapped_air, &pos);
-                } else {
-                    reachable.insert(pos);
                 }
             }
         }
