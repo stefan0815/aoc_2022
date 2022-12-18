@@ -262,8 +262,13 @@ fn solve_with_skipping(
         // println!("rock: {i}, height: {height}/{overall_height}, cave: {}", cave_hashset.len());
 
         if !skipped {
-            let (stone_skip, height_skip) =
-                check_pattern(&mut patterns, i, jet_index, height, num_rocks);
+            let (stone_skip, height_skip) = check_pattern(
+                &mut patterns,
+                i,
+                jet_index,
+                overall_height + height,
+                num_rocks,
+            );
             if stone_skip > 0 {
                 i += stone_skip;
                 overall_height += height_skip;
@@ -273,18 +278,17 @@ fn solve_with_skipping(
         }
 
         // let old_height = get_cave_height(&cave_hashset);
-        if !skipped {
-            let truncated_height: usize;
-            (cave_hashset, truncated_height) = truncate_cave(&cave_hashset, width);
-            if truncated_height != 0 {
-                overall_height += truncated_height;
+        let truncated_height: usize;
+        (cave_hashset, truncated_height) = truncate_cave(&cave_hashset, width);
+        if truncated_height != 0 {
+            overall_height += truncated_height;
+            height = get_cave_height(&cave_hashset);
+            if !skipped {
                 let new_state = (cave_hashset.clone(), i, jet_index, overall_height);
                 let (matches, stone_skip, height_skip) =
                     matches_previous_states(&states, &new_state);
-                states.push(new_state);
-                height = get_cave_height(&cave_hashset);
+                states.push(new_state.clone());
                 // println!("Truncated Cave from height {old_height} -> {height}, truncated: {truncated_height}/{overall_height}");
-
                 if matches {
                     let skip = (num_rocks - i) / stone_skip;
                     i += skip * stone_skip;
