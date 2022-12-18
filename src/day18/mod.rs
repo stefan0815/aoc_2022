@@ -4,6 +4,15 @@ use std::{
     fs,
 };
 
+enum Direction {
+    Left = 0,
+    Right = 1,
+    Down = 2,
+    Up = 3,
+    Forward = 4,
+    Back = 5,
+}
+
 fn get_total_surface(cubes: &HashMap<(i32, i32, i32), i32>) -> i32 {
     let mut total_surface = 0;
     for (_, surface) in cubes {
@@ -12,35 +21,69 @@ fn get_total_surface(cubes: &HashMap<(i32, i32, i32), i32>) -> i32 {
     return total_surface;
 }
 
-fn get_limits(cubes: &HashMap<(i32, i32, i32), i32>) -> ((i32,i32), (i32,i32), (i32,i32)) {
-    let mut limit_x = (i32::MAX, i32::MIN);
-    let mut limit_y = (i32::MAX, i32::MIN);
-    let mut limit_z = (i32::MAX, i32::MIN);
-    for (pos, _) in cubes {
-        limit_x.0 = min(limit_x.0, pos.0);
-        limit_x.1 = max(limit_x.1, pos.0);
-        limit_y.0 = min(limit_y.0, pos.1);
-        limit_y.1 = max(limit_y.1, pos.1);
-        limit_z.0 = min(limit_z.0, pos.2);
-        limit_z.1 = max(limit_z.1, pos.2);
+fn get_coord_for_direction(pos: &(i32, i32, i32), dir: &Direction) -> i32 {
+    match dir {
+        Direction::Left | Direction::Right => return pos.0,
+        Direction::Down | Direction::Up => return pos.1,
+        Direction::Forward | Direction::Back => return pos.2,
     }
-    return (limit_x, limit_y, limit_z);
 }
 
-fn get_trapped_air(
-    cubes: &HashMap<(i32, i32, i32), i32>,
-    limit: i32,
-) -> HashMap<(i32, i32, i32), i32> {
-    let (limit_x, limit_y, limit_z) = get_limits(cubes);
+fn get_limit_for_direction(bounding_box: &(i32, i32, i32, i32, i32, i32), dir: &Direction) -> i32 {
+    match dir {
+        Direction::Left => return bounding_box.0,
+        Direction::Right => return bounding_box.1,
+        Direction::Down => return bounding_box.2,
+        Direction::Up => return bounding_box.3,
+        Direction::Forward => return bounding_box.4,
+        Direction::Back => return bounding_box.5,
+    }
+}
+
+fn is_outside_bounding_box_in_direction(
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+    dir: &Direction,
+) -> bool {
+    let coord_in_direction = get_coord_for_direction(pos, dir);
+    let limit_in_direction = get_limit_for_direction(bounding_box, dir);
+    match dir {
+        Direction::Left | Direction::Down | Direction::Forward => {
+            // println!("is_outside_bounding_box_in_direction: {coord_in_direction} < {limit_in_direction}");
+            return coord_in_direction < limit_in_direction;
+        }
+        Direction::Right | Direction::Up | Direction::Back => {
+            // println!("is_outside_bounding_box_in_direction: {coord_in_direction} > {limit_in_direction}");
+            return coord_in_direction > limit_in_direction;
+        }
+    }
+}
+
+fn get_bounding_box(cubes: &HashMap<(i32, i32, i32), i32>) -> (i32, i32, i32, i32, i32, i32) {
+    let mut bounding_box = (i32::MAX, i32::MIN, i32::MAX, i32::MIN, i32::MAX, i32::MIN);
+    for (pos, _) in cubes {
+        bounding_box.0 = min(bounding_box.0, pos.0);
+        bounding_box.1 = max(bounding_box.1, pos.0);
+        bounding_box.2 = min(bounding_box.2, pos.1);
+        bounding_box.3 = max(bounding_box.3, pos.1);
+        bounding_box.4 = min(bounding_box.4, pos.2);
+        bounding_box.5 = max(bounding_box.5, pos.2);
+    }
+    return bounding_box;
+}
+
+fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, i32), i32> {
+    let bounding_box = get_bounding_box(cubes);
+    let (left, right, down, up, forward, back) = bounding_box;
     let mut trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
-    for x in limit_x.0..limit_x.1 + 1 {
-        for y in limit_y.0..limit_y.1 + 1 {
-            for z in limit_z.0..limit_z.1 + 1 {
+    for x in left..right + 1 {
+        for y in down..up + 1 {
+            for z in forward..back + 1 {
                 let pos = (x, y, z);
                 if cubes.contains_key(&pos) {
                     continue;
                 }
-                if !is_reachable(&cubes, &pos, limit) {
+                if is_trapped(&cubes, &pos, &bounding_box) {
                     insert_pos(&mut trapped_air, &pos);
                 }
             }
@@ -49,83 +92,67 @@ fn get_trapped_air(
     return trapped_air;
 }
 
-fn is_reachable(cubes: &HashMap<(i32, i32, i32), i32>, pos: &(i32, i32, i32), limit: i32) -> bool {
-    let rays = ray_casting(pos, limit);
-    for ray in rays {
-        // print_pos("Ray: ", *ray.last().unwrap());
-        if cubes.contains_key(&ray[0]) {
-            continue;
-        }
-        let mut ray_collision = false;
-        for ray_pos in &ray[1..] {
-            if cubes.contains_key(ray_pos) {
-                ray_collision = true;
+fn move_pos(pos: &(i32, i32, i32), dir: &Direction) -> (i32, i32, i32) {
+    match dir {
+        Direction::Left => return (pos.0 - 1, pos.1, pos.2),
+        Direction::Right => return (pos.0 + 1, pos.1, pos.2),
+        Direction::Down => return (pos.0, pos.1 - 1, pos.2),
+        Direction::Up => return (pos.0, pos.1 + 1, pos.2),
+        Direction::Forward => return (pos.0, pos.1, pos.2 - 1),
+        Direction::Back => return (pos.0, pos.1, pos.2 + 1),
+    }
+}
+
+fn is_trapped(
+    cubes: &HashMap<(i32, i32, i32), i32>,
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+) -> bool {
+    for dir in [
+        Direction::Left,
+        Direction::Right,
+        Direction::Down,
+        Direction::Up,
+        Direction::Forward,
+        Direction::Back,
+    ] {
+        let mut new_pos = pos.clone();
+        loop {
+            new_pos = move_pos(&new_pos, &dir);
+            if cubes.contains_key(&new_pos) {
                 break;
             }
-        }
-        if !ray_collision {
-            return true;
+            if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
+                // print_pos("is not trapped: ", pos);
+                return false;
+            }
         }
     }
-    return false;
+    // print_pos("is trapped: ", pos);
+    return true;
 }
 
-
-
-fn ray_casting(pos: &(i32, i32, i32), limit: i32) -> Vec<Vec<(i32, i32, i32)>> {
-    let mut rays: Vec<Vec<(i32, i32, i32)>> = Vec::new();
-
-    let mut ray_right: Vec<(i32, i32, i32)> = Vec::new();
-    let mut ray_left: Vec<(i32, i32, i32)> = Vec::new();
-    for x in 1..limit {
-        ray_right.push((pos.0 + x, pos.1, pos.2));
-        ray_left.push((pos.0 - x, pos.1, pos.2));
-    }
-    rays.push(ray_right);
-    rays.push(ray_left);
-
-    let mut ray_up: Vec<(i32, i32, i32)> = Vec::new();
-    let mut ray_down: Vec<(i32, i32, i32)> = Vec::new();
-    for y in 1..limit {
-        ray_up.push((pos.0, pos.1 + y, pos.2));
-        ray_down.push((pos.0, pos.1 - y, pos.2));
-    }
-    rays.push(ray_up);
-    rays.push(ray_down);
-
-    let mut ray_back: Vec<(i32, i32, i32)> = Vec::new();
-    let mut ray_forward: Vec<(i32, i32, i32)> = Vec::new();
-    for z in 1..limit {
-        ray_back.push((pos.0, pos.1, pos.2 + z));
-        ray_forward.push((pos.0, pos.1, pos.2 - z));
-    }
-    rays.push(ray_back);
-    rays.push(ray_forward);
-
-    return rays;
-}
-
-fn neighbors(pos: (i32, i32, i32)) -> Vec<(i32, i32, i32)> {
+fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
     let mut neighbors: Vec<(i32, i32, i32)> = Vec::new();
-    for x in [pos.0 - 1, pos.0 + 1] {
-        neighbors.push((x, pos.1, pos.2));
+    for dir in [
+        Direction::Left,
+        Direction::Right,
+        Direction::Down,
+        Direction::Up,
+        Direction::Forward,
+        Direction::Back,
+    ] {
+        neighbors.push(move_pos(&pos, &dir));
     }
-    for y in [pos.1 - 1, pos.1 + 1] {
-        neighbors.push((pos.0, y, pos.2));
-    }
-    for z in [pos.2 - 1, pos.2 + 1] {
-        neighbors.push((pos.0, pos.1, z));
-    }
-
     return neighbors;
 }
 
-fn print_pos(name: &str, pos: (i32, i32, i32)) {
-    println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
-}
+// fn print_pos(name: &str, pos: &(i32, i32, i32)) {
+//     println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
+// }
 
 fn insert_pos(cubes: &mut HashMap<(i32, i32, i32), i32>, pos: &(i32, i32, i32)) {
-    let neighbors = neighbors(*pos);
+    let neighbors = neighbors(pos);
     let mut num_neighbors = 0;
     // print_pos("Pos: ", pos);
     for neighbor in neighbors {
@@ -153,24 +180,23 @@ pub fn solver() {
             .map(|coord| coord.parse::<i32>().unwrap())
             .collect();
         let pos = (position[0], position[1], position[2]);
-
         insert_pos(&mut cubes, &pos);
     }
-
+    
+    println!("Day18:");
     let total_surface = get_total_surface(&cubes);
+    println!("Part one: Surface: {total_surface}");
 
-    let limit = 100;
-    let trapped_air = get_trapped_air(&cubes, limit);
+    let trapped_air = get_trapped_air(&cubes);
     let trapped_air_surface = get_total_surface(&trapped_air);
 
-    let mut new_cubes = cubes.clone();
-    for iter in 0..10 {
-        let trapped = get_trapped_air(&new_cubes, limit);
-        println!("{}", get_total_surface(&trapped));
-        new_cubes = trapped;
-    }
+    // let mut new_cubes = cubes.clone();
+    // for _ in 0..10 {
+    //     let trapped = get_trapped_air(&new_cubes, limit);
+    //     println!("{}", get_total_surface(&trapped));
+    //     new_cubes = trapped;
+    // }
+
     let total_surface_part_two = total_surface - trapped_air_surface;
-    println!("Day18:");
-    println!("Part one: Surface: {total_surface}");
     println!("Part two: Exterior Surface: {}", total_surface_part_two);
 }
