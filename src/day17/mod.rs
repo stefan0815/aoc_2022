@@ -258,7 +258,7 @@ fn matches_previous_states(
 }
 
 fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
-    for repeat in (1..height_pattern.len() / 2) {
+    for repeat in 1..height_pattern.len() / 2 {
         let mut i = repeat;
         let (mut found_pattern, stone_skip, height_skip) = (
             true,
@@ -280,7 +280,7 @@ fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
         }
         if found_pattern {
             // println!("found pattern");
-            return (found_pattern, stone_skip, height_skip)
+            return (found_pattern, stone_skip, height_skip);
         }
     }
     return (false, 0, 0);
@@ -326,9 +326,9 @@ fn solve_part_two(
         let (stone_skip, height_skip) =
             check_pattern(&mut patterns, i, jet_index, height, num_rocks);
         if stone_skip > 0 {
-        i += stone_skip;
-        overall_height += height_skip;
-        continue;
+            i += stone_skip;
+            overall_height += height_skip;
+            continue;
         }
 
         let truncated_height: usize;
