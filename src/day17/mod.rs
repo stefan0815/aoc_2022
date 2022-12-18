@@ -118,31 +118,6 @@ fn cave_to_hashset(cave: &Vec<usize>) -> HashSet<Pos> {
     return cave_hashset;
 }
 
-// fn hashset_to_cave(cave_hashset: &HashSet<Pos>, width: usize) -> Vec<usize> {
-//     let mut cave: Vec<usize> = vec![0; width];
-
-//     for pos in cave_hashset {
-//         cave[pos.0 as usize] = max(cave[pos.0 as usize], pos.1 as usize);
-//     }
-//     return cave;
-// }
-
-// fn merge_rock_with_cave(
-//     cave_hashset: &HashSet<Pos>,
-//     rock_hashset: &HashSet<Pos>,
-//     width: usize,
-// ) -> Vec<usize> {
-//     let mut cave: Vec<usize> = hashset_to_cave(cave_hashset, width);
-//     let rock: Vec<usize> = hashset_to_cave(rock_hashset, width);
-
-//     for i in 0..width {
-//         // println!("Col: {i}, Cave: {}, Rock: {}", cave[i], rock[i]);
-//         cave[i] = max(cave[i], rock[i]);
-//     }
-
-//     return cave;
-// }
-
 fn merge_rock_with_cave(cave_hashset: &HashSet<Pos>, rock_hashset: &HashSet<Pos>) -> HashSet<Pos> {
     return HashSet::from_iter(cave_hashset.union(&rock_hashset).cloned());
 }
@@ -201,46 +176,6 @@ fn truncate_cave(cave_hashset: &HashSet<Pos>, width: usize) -> (HashSet<Pos>, us
 //     }
 // }
 
-fn solve_part_one(
-    cave: &Vec<usize>,
-    jet_pattern: &Vec<char>,
-    num_rocks: usize,
-    width: usize,
-) -> usize {
-    let mut cave_hashset = cave_to_hashset(&cave);
-    let mut jet_index = 0;
-    let mut height = 0;
-
-    for i in 0..num_rocks {
-        // println!("rock: {i}, height: {height}");
-        let mut rock = shape(i % 5, height as i32);
-        // println!("new Rock Shape:{}: ", i%5);
-        // for pos in &rock{
-        //     println!("Pos: {},{}", pos.0,pos.1);
-        // }
-        loop {
-            let jet = jet_pattern[jet_index];
-            jet_index = (jet_index + 1) % jet_pattern.len();
-            // println!("Move: {jet}");
-            let rock_move = move_rock(&rock, jet, width);
-            let collision = check_collision(&cave_hashset, &rock_move);
-            if !collision {
-                rock = rock_move;
-            }
-            let rock_down = move_rock_down(&rock);
-            let collision = check_collision(&cave_hashset, &rock_down);
-            if collision {
-                cave_hashset = merge_rock_with_cave(&cave_hashset, &rock);
-                height = get_cave_height(&cave_hashset);
-                break;
-            }
-            rock = rock_down;
-        }
-    }
-    // render_hash(&cave_hashset, width);
-    return height;
-}
-
 fn matches_previous_states(
     states: &Vec<(HashSet<Pos>, usize, usize, usize)>,
     state: &(HashSet<Pos>, usize, usize, usize),
@@ -258,7 +193,8 @@ fn matches_previous_states(
 }
 
 fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
-    for repeat in 1..height_pattern.len() / 2 {
+    let mut repeat = 1;
+    while repeat + repeat < height_pattern.len() {
         let mut i = repeat;
         let (mut found_pattern, stone_skip, height_skip) = (
             true,
@@ -282,6 +218,7 @@ fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
             // println!("found pattern");
             return (found_pattern, stone_skip, height_skip);
         }
+        repeat += 1;
     }
     return (false, 0, 0);
 }
@@ -307,7 +244,7 @@ fn check_pattern(
     return (0, 0);
 }
 
-fn solve_part_two(
+fn solve_with_skipping(
     cave: &Vec<usize>,
     jet_pattern: &Vec<char>,
     num_rocks: usize,
@@ -320,34 +257,42 @@ fn solve_part_two(
     let mut states: Vec<(HashSet<Pos>, usize, usize, usize)> = Vec::new();
     let mut i = 0;
     let mut patterns: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
+    let mut skipped = false;
     while i < num_rocks {
         // println!("rock: {i}, height: {height}/{overall_height}, cave: {}", cave_hashset.len());
 
-        let (stone_skip, height_skip) =
-            check_pattern(&mut patterns, i, jet_index, height, num_rocks);
-        if stone_skip > 0 {
-            i += stone_skip;
-            overall_height += height_skip;
-            continue;
+        if !skipped {
+            let (stone_skip, height_skip) =
+                check_pattern(&mut patterns, i, jet_index, height, num_rocks);
+            if stone_skip > 0 {
+                i += stone_skip;
+                overall_height += height_skip;
+                skipped = true;
+                continue;
+            }
         }
 
-        let truncated_height: usize;
         // let old_height = get_cave_height(&cave_hashset);
-        (cave_hashset, truncated_height) = truncate_cave(&cave_hashset, width);
-        if truncated_height != 0 {
-            overall_height += truncated_height;
-            let new_state = (cave_hashset.clone(), i, jet_index, overall_height);
-            let (matches, stone_skip, height_skip) = matches_previous_states(&states, &new_state);
-            states.push(new_state);
-            height = get_cave_height(&cave_hashset);
-            // println!("Truncated Cave from height {old_height} -> {height}, truncated: {truncated_height}/{overall_height}");
+        if !skipped {
+            let truncated_height: usize;
+            (cave_hashset, truncated_height) = truncate_cave(&cave_hashset, width);
+            if truncated_height != 0 {
+                overall_height += truncated_height;
+                let new_state = (cave_hashset.clone(), i, jet_index, overall_height);
+                let (matches, stone_skip, height_skip) =
+                    matches_previous_states(&states, &new_state);
+                states.push(new_state);
+                height = get_cave_height(&cave_hashset);
+                // println!("Truncated Cave from height {old_height} -> {height}, truncated: {truncated_height}/{overall_height}");
 
-            if matches {
-                let skip = (num_rocks - i) / stone_skip;
-                i += skip * stone_skip;
-                overall_height += skip * height_skip;
-                // println!("Skip stone: {}, Skip height: {}", skip * stone_skip, skip * height_skip);
-                continue;
+                if matches {
+                    let skip = (num_rocks - i) / stone_skip;
+                    i += skip * stone_skip;
+                    overall_height += skip * height_skip;
+                    // println!("Skip stone: {}, Skip height: {}", skip * stone_skip, skip * height_skip);
+                    skipped = true;
+                    continue;
+                }
             }
         }
 
@@ -391,9 +336,9 @@ pub fn solver() {
     let num_rocks_part_one = 2022;
     let num_rocks_part_two = 1000000000000;
     println!("Day17:");
-    let height_part_one = solve_part_one(&cave, &jet_pattern, num_rocks_part_one, width);
+    let height_part_one = solve_with_skipping(&cave, &jet_pattern, num_rocks_part_one, width);
     println!("Part one: Cave height {height_part_one} after {num_rocks_part_one} rocks");
 
-    let height_part_two = solve_part_two(&cave, &jet_pattern, num_rocks_part_two, width);
+    let height_part_two = solve_with_skipping(&cave, &jet_pattern, num_rocks_part_two, width);
     println!("Part two: Cave height {height_part_two} after {num_rocks_part_two} rocks");
 }
