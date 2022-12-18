@@ -257,55 +257,55 @@ fn matches_previous_states(
     return (false, 0, 0);
 }
 
-// fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
-//     for repeat in (1..height_pattern.len() / 2) {
-//         let mut i = repeat;
-//         let (mut found_pattern, stone_skip, height_skip) = (
-//             true,
-//             height_pattern[repeat].0 - height_pattern[0].0,
-//             height_pattern[repeat].1 - height_pattern[0].1,
-//         );
-//         // println!("stone_skip:{}, height_skip:{}", stone_skip, height_skip);
-//         while i + repeat < height_pattern.len() {
-//             let (stone_diff, height_diff) = (
-//                 height_pattern[repeat + i].0 - height_pattern[i].0,
-//                 height_pattern[repeat + i].1 - height_pattern[i].1,
-//             );
-//             // println!("stone_diff:{}, height_diff:{}", stone_diff, height_diff);
-//             if stone_skip != stone_diff || height_skip != height_diff {
-//                 found_pattern = false;
-//                 break;
-//             }
-//             i += repeat;
-//         }
-//         if found_pattern {
-//             // println!("found pattern");
-//             return (found_pattern, stone_skip, height_skip)
-//         }
-//     }
-//     return (false, 0, 0);
-// }
+fn find_pattern(height_pattern: &Vec<(usize, usize)>) -> (bool, usize, usize) {
+    for repeat in (1..height_pattern.len() / 2) {
+        let mut i = repeat;
+        let (mut found_pattern, stone_skip, height_skip) = (
+            true,
+            height_pattern[repeat].0 - height_pattern[0].0,
+            height_pattern[repeat].1 - height_pattern[0].1,
+        );
+        // println!("stone_skip:{}, height_skip:{}", stone_skip, height_skip);
+        while i + repeat < height_pattern.len() {
+            let (stone_diff, height_diff) = (
+                height_pattern[repeat + i].0 - height_pattern[i].0,
+                height_pattern[repeat + i].1 - height_pattern[i].1,
+            );
+            // println!("stone_diff:{}, height_diff:{}", stone_diff, height_diff);
+            if stone_skip != stone_diff || height_skip != height_diff {
+                found_pattern = false;
+                break;
+            }
+            i += repeat;
+        }
+        if found_pattern {
+            // println!("found pattern");
+            return (found_pattern, stone_skip, height_skip)
+        }
+    }
+    return (false, 0, 0);
+}
 
-// fn check_pattern(
-//     patterns: &mut HashMap<(usize, usize), Vec<(usize, usize)>>,
-//     i: usize,
-//     jet_index: usize,
-//     height: usize,
-//     num_rocks: usize,
-// ) -> (usize, usize) {
-//     if patterns.contains_key(&(i % 5, jet_index)) {
-//         let height_pattern = patterns.get_mut(&(i % 5, jet_index)).unwrap();
-//         height_pattern.push((i, height));
-//         let (matches, stone_skip, height_skip) = find_pattern(&height_pattern);
-//         if matches {
-//             let skip = (num_rocks - i) / stone_skip;
-//             return (skip * stone_skip, skip * height_skip);
-//         }
-//     } else {
-//         patterns.insert((i % 5, jet_index), vec![(i, height)]);
-//     }
-//     return (0, 0);
-// }
+fn check_pattern(
+    patterns: &mut HashMap<(usize, usize), Vec<(usize, usize)>>,
+    i: usize,
+    jet_index: usize,
+    height: usize,
+    num_rocks: usize,
+) -> (usize, usize) {
+    if patterns.contains_key(&(i % 5, jet_index)) {
+        let height_pattern = patterns.get_mut(&(i % 5, jet_index)).unwrap();
+        height_pattern.push((i, height));
+        let (matches, stone_skip, height_skip) = find_pattern(&height_pattern);
+        if matches {
+            let skip = (num_rocks - i) / stone_skip;
+            return (skip * stone_skip, skip * height_skip);
+        }
+    } else {
+        patterns.insert((i % 5, jet_index), vec![(i, height)]);
+    }
+    return (0, 0);
+}
 
 fn solve_part_two(
     cave: &Vec<usize>,
@@ -319,17 +319,17 @@ fn solve_part_two(
     let mut overall_height = 0;
     let mut states: Vec<(HashSet<Pos>, usize, usize, usize)> = Vec::new();
     let mut i = 0;
-    // let mut patterns: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
+    let mut patterns: HashMap<(usize, usize), Vec<(usize, usize)>> = HashMap::new();
     while i < num_rocks {
         // println!("rock: {i}, height: {height}/{overall_height}, cave: {}", cave_hashset.len());
 
-        // let (stone_skip, height_skip) =
-        //     check_pattern(&mut patterns, i, jet_index, height, num_rocks);
-        // if stone_skip > 0 {
-        // i += stone_skip;
-        // overall_height += height_skip;
-        // continue;
-        // }
+        let (stone_skip, height_skip) =
+            check_pattern(&mut patterns, i, jet_index, height, num_rocks);
+        if stone_skip > 0 {
+        i += stone_skip;
+        overall_height += height_skip;
+        continue;
+        }
 
         let truncated_height: usize;
         // let old_height = get_cave_height(&cave_hashset);
