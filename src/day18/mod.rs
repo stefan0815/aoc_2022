@@ -135,42 +135,12 @@ fn is_trapped(
         Direction::Forward,
         Direction::Back,
     ] {
-        if is_reachable_in_direction(cubes, pos, bounding_box, &dir){
+        if is_reachable_in_direction(cubes, pos, bounding_box, &dir) {
             return false;
         }
     }
     // print_pos("is trapped: ", pos);
     return true;
-}
-
-fn reachable_surface(
-    cubes: &HashMap<(i32, i32, i32), i32>,
-    pos: &(i32, i32, i32),
-    bounding_box: &(i32, i32, i32, i32, i32, i32),
-) -> i32 {
-    let mut reachable_surface = 0;
-    for dir in [
-        Direction::Left,
-        Direction::Right,
-        Direction::Down,
-        Direction::Up,
-        Direction::Forward,
-        Direction::Back,
-    ] {
-        if is_reachable_in_direction(cubes, pos, bounding_box, &dir){
-            reachable_surface += 1;
-        }
-    }
-    return reachable_surface;
-}
-
-fn get_reachable_surface(cubes: &HashMap<(i32, i32, i32), i32>) -> i32 {
-    let mut total_reachable_surface = 0;
-    let bounding_box = get_bounding_box(cubes);
-    for (pos, _) in cubes {
-        total_reachable_surface += reachable_surface(&cubes,&pos, &bounding_box);
-    }
-    return total_reachable_surface;
 }
 
 fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
@@ -188,9 +158,9 @@ fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
     return neighbors;
 }
 
-// fn print_pos(name: &str, pos: &(i32, i32, i32)) {
-//     println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
-// }
+fn print_pos(name: &str, pos: &(i32, i32, i32)) {
+    println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
+}
 
 fn insert_pos(cubes: &mut HashMap<(i32, i32, i32), i32>, pos: &(i32, i32, i32)) {
     let neighbors = neighbors(pos);
@@ -231,8 +201,8 @@ pub fn solver() {
     let trapped_air = get_trapped_air(&cubes);
     let trapped_air_surface = get_total_surface(&trapped_air);
     let total_surface_part_two = total_surface - trapped_air_surface;
-    println!("Part two: Exterior Surface trapped air approach: {}", total_surface_part_two);
-
-    let total_reachable_surface_part_two = get_reachable_surface(&cubes);
-    println!("Part two: Reachable Surface : {}", total_reachable_surface_part_two);
+    println!(
+        "Part two: Exterior Surface trapped air approach: {}",
+        total_surface_part_two
+    );
 }
