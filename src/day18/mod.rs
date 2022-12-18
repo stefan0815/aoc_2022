@@ -1,6 +1,6 @@
 use std::{
     cmp::{max, min},
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fs,
 };
 
@@ -72,51 +72,9 @@ fn get_bounding_box(cubes: &HashMap<(i32, i32, i32), i32>) -> (i32, i32, i32, i3
     return bounding_box;
 }
 
-fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, i32), i32> {
-    let bounding_box = get_bounding_box(cubes);
-    let (left, right, down, up, forward, back) = bounding_box;
-    let mut trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
-    let mut reachable_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
-    let mut really_trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
-
-    for x in left..right + 1 {
-        for y in down..up + 1 {
-            for z in forward..back + 1 {
-                let pos = (x, y, z);
-                if cubes.contains_key(&pos) {
-                    continue;
-                }
-                if is_trapped(&cubes, &pos, &bounding_box) {
-                    insert_pos(&mut trapped_air, &pos);
-                } else {
-                    insert_pos(&mut reachable_air, &pos);
-                }
-            }
-        }
-    }
-
-    for (pos,_) in trapped_air{
-        if is_really_trapped(cubes, &reachable_air, &pos, &bounding_box){
-            insert_pos(&mut really_trapped_air, &pos);
-        }
-    }
-
-    return really_trapped_air;
-}
-
-fn move_pos(pos: &(i32, i32, i32), dir: &Direction) -> (i32, i32, i32) {
-    match dir {
-        Direction::Left => return (pos.0 - 1, pos.1, pos.2),
-        Direction::Right => return (pos.0 + 1, pos.1, pos.2),
-        Direction::Down => return (pos.0, pos.1 - 1, pos.2),
-        Direction::Up => return (pos.0, pos.1 + 1, pos.2),
-        Direction::Forward => return (pos.0, pos.1, pos.2 - 1),
-        Direction::Back => return (pos.0, pos.1, pos.2 + 1),
-    }
-}
-
 fn is_reachable_in_direction(
     cubes: &HashMap<(i32, i32, i32), i32>,
+    reachable: &HashSet<(i32, i32, i32)>,
     pos: &(i32, i32, i32),
     bounding_box: &(i32, i32, i32, i32, i32, i32),
     dir: &Direction,
@@ -127,28 +85,8 @@ fn is_reachable_in_direction(
         if cubes.contains_key(&new_pos) {
             return false;
         }
-        if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
-            // print_pos("is not trapped: ", pos);
+        if reachable.contains(&new_pos) {
             return true;
-        }
-    }
-}
-
-fn is_really_reachable_in_direction(
-    cubes: &HashMap<(i32, i32, i32), i32>,
-    reachable: &HashMap<(i32, i32, i32), i32>,
-    pos: &(i32, i32, i32),
-    bounding_box: &(i32, i32, i32, i32, i32, i32),
-    dir: &Direction,
-) -> bool {
-    let mut new_pos = pos.clone();
-    loop {
-        new_pos = move_pos(&new_pos, &dir);
-        if reachable.contains_key(&new_pos){
-            return true;
-        }
-        if cubes.contains_key(&new_pos) {
-            return false;
         }
         if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
             // print_pos("is not trapped: ", pos);
@@ -159,6 +97,7 @@ fn is_really_reachable_in_direction(
 
 fn is_trapped(
     cubes: &HashMap<(i32, i32, i32), i32>,
+    reachable: &HashSet<(i32, i32, i32)>,
     pos: &(i32, i32, i32),
     bounding_box: &(i32, i32, i32, i32, i32, i32),
 ) -> bool {
@@ -170,7 +109,7 @@ fn is_trapped(
         Direction::Forward,
         Direction::Back,
     ] {
-        if is_reachable_in_direction(cubes, pos, bounding_box, &dir) {
+        if is_reachable_in_direction(cubes, reachable, pos, bounding_box, &dir) {
             return false;
         }
     }
@@ -178,26 +117,61 @@ fn is_trapped(
     return true;
 }
 
-fn is_really_trapped(
+fn get_trapped_air_one_bounce(
     cubes: &HashMap<(i32, i32, i32), i32>,
-    reachable_air: &HashMap<(i32, i32, i32), i32>,
-    pos: &(i32, i32, i32),
+    reachable: &mut HashSet<(i32, i32, i32)>,
     bounding_box: &(i32, i32, i32, i32, i32, i32),
-) -> bool {
-    for dir in [
-        Direction::Left,
-        Direction::Right,
-        Direction::Down,
-        Direction::Up,
-        Direction::Forward,
-        Direction::Back,
-    ] {
-        if is_really_reachable_in_direction(cubes, reachable_air, pos, bounding_box, &dir) {
-            return false;
+) -> HashMap<(i32, i32, i32), i32> {
+    let (left, right, down, up, forward, back) = *bounding_box;
+    let mut trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
+    for x in left..right + 1 {
+        for y in down..up + 1 {
+            for z in forward..back + 1 {
+                let pos = (x, y, z);
+                if cubes.contains_key(&pos) {
+                    continue;
+                }
+                if reachable.contains(&pos) {
+                    continue;
+                };
+                if is_trapped(&cubes, &reachable, &pos, &bounding_box) {
+                    insert_pos(&mut trapped_air, &pos);
+                } else {
+                    reachable.insert(pos);
+                }
+            }
         }
     }
-    // print_pos("is trapped: ", pos);
-    return true;
+    return trapped_air;
+}
+
+fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, i32), i32> {
+    let bounding_box = get_bounding_box(cubes);
+    let mut trapped_air = HashMap::new();
+    let mut reachable_air = HashSet::new();
+    loop {
+        let new_trapped_air = get_trapped_air_one_bounce(cubes, &mut reachable_air, &bounding_box);
+
+        if new_trapped_air == trapped_air {
+            return trapped_air;
+        }
+        trapped_air = new_trapped_air;
+    }
+}
+
+// fn print_pos(name: &str, pos: &(i32, i32, i32)) {
+//     println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
+// }
+
+fn move_pos(pos: &(i32, i32, i32), dir: &Direction) -> (i32, i32, i32) {
+    match dir {
+        Direction::Left => return (pos.0 - 1, pos.1, pos.2),
+        Direction::Right => return (pos.0 + 1, pos.1, pos.2),
+        Direction::Down => return (pos.0, pos.1 - 1, pos.2),
+        Direction::Up => return (pos.0, pos.1 + 1, pos.2),
+        Direction::Forward => return (pos.0, pos.1, pos.2 - 1),
+        Direction::Back => return (pos.0, pos.1, pos.2 + 1),
+    }
 }
 
 fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
@@ -213,10 +187,6 @@ fn neighbors(pos: &(i32, i32, i32)) -> Vec<(i32, i32, i32)> {
         neighbors.push(move_pos(&pos, &dir));
     }
     return neighbors;
-}
-
-fn print_pos(name: &str, pos: &(i32, i32, i32)) {
-    println!("{name}: ({},{},{})", pos.0, pos.1, pos.2);
 }
 
 fn insert_pos(cubes: &mut HashMap<(i32, i32, i32), i32>, pos: &(i32, i32, i32)) {
