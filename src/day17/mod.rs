@@ -182,9 +182,9 @@ fn matches_previous_states(
 ) -> (bool, usize, usize) {
     let (hash_state, num_stone_state, jet_index_state, height_state) = state;
     for (hash, num_stone, jet_index, height) in states {
-        if hash == hash_state
-            && num_stone % 5 == num_stone_state % 5
+        if num_stone % 5 == num_stone_state % 5
             && jet_index == jet_index_state
+            && hash == hash_state
         {
             return (true, num_stone_state - num_stone, height_state - height);
         }
