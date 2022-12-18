@@ -76,6 +76,9 @@ fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, 
     let bounding_box = get_bounding_box(cubes);
     let (left, right, down, up, forward, back) = bounding_box;
     let mut trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
+    let mut reachable_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
+    let mut really_trapped_air: HashMap<(i32, i32, i32), i32> = HashMap::new();
+
     for x in left..right + 1 {
         for y in down..up + 1 {
             for z in forward..back + 1 {
@@ -85,11 +88,20 @@ fn get_trapped_air(cubes: &HashMap<(i32, i32, i32), i32>) -> HashMap<(i32, i32, 
                 }
                 if is_trapped(&cubes, &pos, &bounding_box) {
                     insert_pos(&mut trapped_air, &pos);
+                } else {
+                    insert_pos(&mut reachable_air, &pos);
                 }
             }
         }
     }
-    return trapped_air;
+
+    for (pos,_) in trapped_air{
+        if is_really_trapped(cubes, &reachable_air, &pos, &bounding_box){
+            insert_pos(&mut really_trapped_air, &pos);
+        }
+    }
+
+    return really_trapped_air;
 }
 
 fn move_pos(pos: &(i32, i32, i32), dir: &Direction) -> (i32, i32, i32) {
@@ -122,6 +134,29 @@ fn is_reachable_in_direction(
     }
 }
 
+fn is_really_reachable_in_direction(
+    cubes: &HashMap<(i32, i32, i32), i32>,
+    reachable: &HashMap<(i32, i32, i32), i32>,
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+    dir: &Direction,
+) -> bool {
+    let mut new_pos = pos.clone();
+    loop {
+        new_pos = move_pos(&new_pos, &dir);
+        if reachable.contains_key(&new_pos){
+            return true;
+        }
+        if cubes.contains_key(&new_pos) {
+            return false;
+        }
+        if is_outside_bounding_box_in_direction(&new_pos, bounding_box, &dir) {
+            // print_pos("is not trapped: ", pos);
+            return true;
+        }
+    }
+}
+
 fn is_trapped(
     cubes: &HashMap<(i32, i32, i32), i32>,
     pos: &(i32, i32, i32),
@@ -136,6 +171,28 @@ fn is_trapped(
         Direction::Back,
     ] {
         if is_reachable_in_direction(cubes, pos, bounding_box, &dir) {
+            return false;
+        }
+    }
+    // print_pos("is trapped: ", pos);
+    return true;
+}
+
+fn is_really_trapped(
+    cubes: &HashMap<(i32, i32, i32), i32>,
+    reachable_air: &HashMap<(i32, i32, i32), i32>,
+    pos: &(i32, i32, i32),
+    bounding_box: &(i32, i32, i32, i32, i32, i32),
+) -> bool {
+    for dir in [
+        Direction::Left,
+        Direction::Right,
+        Direction::Down,
+        Direction::Up,
+        Direction::Forward,
+        Direction::Back,
+    ] {
+        if is_really_reachable_in_direction(cubes, reachable_air, pos, bounding_box, &dir) {
             return false;
         }
     }
