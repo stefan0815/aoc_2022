@@ -126,10 +126,6 @@ fn get_best_build_permutations(
             depth + 1,
         );
 
-        // if local_possiblities.len() == 0 {
-        //     all_possibilities.push((local_storage[3],vec![*robot_type]));
-        // }
-
         for local_possibility in local_possiblities {
             // let mut this_step = (local_storage[3], vec![*robot_type]);
             // this_step.0 += local_possibility.0;
@@ -186,11 +182,10 @@ fn solve(blueprints: &Vec<[[usize; 3]; 4]>, time: usize, debug: bool) -> (usize,
             // for permutation in &all_permutations{
             //     println!("{}", permutation.0);
             // }
-            let best_geode = all_permutations.first().unwrap().0;
-
-            if best_geode > max_geode {
-                max_geode = best_geode;
-                max_build_order = all_permutations.first().unwrap().1.clone();
+            let (best_geode, best_build_order) = all_permutations.first().unwrap();
+            if *best_geode > max_geode || max_geode == 0{
+                max_geode = *best_geode;
+                max_build_order = best_build_order.to_vec();
             }
             if debug {
                 println!(
@@ -202,7 +197,7 @@ fn solve(blueprints: &Vec<[[usize; 3]; 4]>, time: usize, debug: bool) -> (usize,
         let quality = (id + 1) * max_geode;
         if debug {
             println!(
-                "Blueprint {}: max_geode: {max_geode}, quality:{quality}",
+                "Blueprint {}: max_geode: {max_geode}, quality: {quality}",
                 id + 1
             );
             print_build_order(&max_build_order);
