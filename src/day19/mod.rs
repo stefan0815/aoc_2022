@@ -4,19 +4,131 @@ use std::{
     fs,
 };
 
+fn possible_robots(
+    blueprint: &[[usize; 3]; 4],
+    production: &[usize; 4],
+    production_limit: &[usize; 4],
+) -> Vec<usize> {
+    let mut possible_robots: Vec<usize> = Vec::new();
+    for (robot_type, robot_cost) in blueprint.iter().enumerate() {
+        if production_limit[robot_type] > 0 && production[robot_type] >= production_limit[robot_type]{
+            continue;
+        }
+        let mut buildable = true;
+        for (material, cost) in robot_cost.iter().enumerate() {
+            if *cost > 0 && production[material] == 0 {
+                buildable = false;
+                break;
+            }
+        }
+        if buildable {
+            possible_robots.push(robot_type);
+        }
+    }
+    return possible_robots;
+}
+
+fn produce_resource(production: &[usize; 4], storage: &[usize; 4], time: usize) -> [usize; 4] {
+    return [
+        storage[0] + production[0] * time,
+        storage[1] + production[1] * time,
+        storage[2] + production[2] * time,
+        storage[3] + production[3] * time,
+    ];
+}
+
+fn build_robot(
+    blueprint: &[[usize; 3]; 4],
+    robot_type: usize,
+    production: &mut [usize; 4],
+    storage: &mut [usize; 4],
+    time: &mut usize,
+) -> bool {
+    let cost = blueprint[robot_type];
+    let mut max_time_needed = 0;
+    for (material_type, material_cost) in cost.iter().enumerate() {
+        if *material_cost <= storage[material_type] {
+            continue;
+        }
+        let material_needed = material_cost - storage[material_type];
+        let mut time_needed = material_needed / production[material_type];
+        if material_needed % production[material_type] > 0 {
+            time_needed += 1;
+        }
+        if time_needed > max_time_needed {
+            max_time_needed = time_needed;
+        }
+    }
+
+    if max_time_needed + 2 > *time {
+        // return if robot would never produce any material (+1 build_time +1produce_time)
+        return false;
+    }
+    // println!("robot_type: {robot_type}, storage: [{},{},{}], production: [{},{},{}], cost: [{},{},{}], {max_time_needed}", storage[0], storage[1], storage[2], production[0], production[1], production[2], cost[0], cost[1], cost[2]);
+    // do not produce for max_time_needed + 1 to ensure that we have enough resources underflow would panic
+    let mut new_storage = produce_resource(&production, &storage, max_time_needed);
+    new_storage = [
+        new_storage[0] - cost[0],
+        new_storage[1] - cost[1],
+        new_storage[2] - cost[2],
+        new_storage[3],
+    ];
+
+    new_storage = produce_resource(&production, &new_storage, 1);
+    *time -= max_time_needed + 1;
+    *storage = new_storage;
+    production[robot_type] += 1;
+    return true;
+}
+
 fn get_best_build_permutations(
     blueprint: &[[usize; 3]; 4],
     production: &[usize; 4],
     storage: &[usize; 4],
     time: usize,
+    production_limit: &[usize; 4],
     early_break_limit: usize,
     depth: usize,
 ) -> Vec<(usize, Vec<usize>)> {
     let mut all_possibilities: Vec<(usize, Vec<usize>)> = Vec::new();
-    // let possible_robots = possible_robots(&blueprint, &production, &storage, time);
-    // for robot in &possible_robots {
+    let possible_robots = possible_robots(&blueprint, &production, &production_limit);
+    for robot_type in &possible_robots {
+        let mut local_production = production.clone();
+        let mut local_storage = storage.clone();
+        let mut local_time = time.clone();
+        let successful = build_robot(
+            &blueprint,
+            *robot_type,
+            &mut local_production,
+            &mut local_storage,
+            &mut local_time,
+        );
+        if !successful {
+            local_storage = produce_resource(&local_production, &local_storage, local_time);
+            all_possibilities.push((local_storage[3], vec![]));
+            continue;
+        }
+        let local_possiblities = get_best_build_permutations(
+            &blueprint,
+            &local_production,
+            &local_storage,
+            local_time,
+            production_limit,
+            early_break_limit,
+            depth + 1,
+        );
 
-    // }
+        // if local_possiblities.len() == 0 {
+        //     all_possibilities.push((local_storage[3],vec![*robot_type]));
+        // }
+
+        for local_possibility in local_possiblities {
+            let mut this_step = (local_storage[3], vec![*robot_type]);
+            this_step.0 += local_possibility.0;
+            this_step.1.append(&mut local_possibility.1.clone());
+            all_possibilities.push(this_step);
+        }
+    }
     return all_possibilities;
 }
 
@@ -34,7 +146,7 @@ fn get_cost_from_string(cost_as_string: String) -> [usize; 3] {
         }
     }
     println!("{cost_as_string}");
-    println!("[{},{},{}]", cost[0],cost[1],cost[2]);
+    println!("[{},{},{}]", cost[0], cost[1], cost[2]);
     return cost;
 }
 
@@ -69,10 +181,18 @@ pub fn solver() {
         let production: [usize; 4] = [1, 0, 0, 0];
         let storage: [usize; 4] = [0, 0, 0, 0];
         let time = 24;
-        let early_break_limit = 0;
-        let mut all_permutations =
-            get_best_build_permutations(&blueprint, &production, &storage, time, early_break_limit, 0);
-        all_permutations.sort_by(|a,b| b.0.cmp(&a.0));
+        let production_limit:[usize; 4] = [1, 1, 1, 0];
+        let early_break_limit = 5;
+        let mut all_permutations = get_best_build_permutations(
+            &blueprint,
+            &production,
+            &storage,
+            time,
+            &production_limit,
+            early_break_limit,
+            0,
+        );
+        all_permutations.sort_by(|a, b| b.0.cmp(&a.0));
         let max_geode = all_permutations.first().unwrap().0;
         let quality = id * max_geode;
         if quality > max_quality {
@@ -80,5 +200,4 @@ pub fn solver() {
         }
     }
     println!("Max Quality: {max_quality}");
-
 }
