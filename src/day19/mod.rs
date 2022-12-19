@@ -1,4 +1,7 @@
-use std::{fs, cmp::{max, min}};
+use std::{
+    cmp::{max, min},
+    fs,
+};
 
 fn possible_robots(
     blueprint: &[[usize; 3]; 4],
@@ -146,24 +149,30 @@ fn print_build_order(build_order: &Vec<usize>) {
     println!("]");
 }
 
-fn solve_part_one(blueprints: &Vec<[[usize; 3]; 4]>) -> usize {
+fn solve(blueprints: &Vec<[[usize; 3]; 4]>, time: usize, debug: bool) -> (usize, Vec<usize>) {
     let production: [usize; 4] = [1, 0, 0, 0];
     let storage: [usize; 4] = [0, 0, 0, 0];
-    let time = 24;
     let mut quality_sum = 0;
-
+    let mut geodes_per_blueprint: Vec<usize> = Vec::new();
     for (id, blueprint) in blueprints.iter().enumerate() {
-        let mut max_costs = [0,0,0];
-        for material_costs in blueprint{
+        let mut max_costs = [0, 0, 0];
+        for material_costs in blueprint {
             max_costs[0] = max(max_costs[0], material_costs[0]);
             max_costs[1] = max(max_costs[1], material_costs[1]);
             max_costs[2] = max(max_costs[2], material_costs[2]);
         }
-        println!("Blueprint {}", id + 1);
+        if debug {
+            println!("Blueprint {}", id + 1);
+        }
         let mut max_geode = 0;
         let mut max_build_order: Vec<usize> = Vec::new();
         for limit in [2, 5, 7, time] {
-            let production_limit: [usize; 4] = [min(max_costs[0],limit), min(max_costs[1],limit), min(max_costs[2],limit), 0];
+            let production_limit: [usize; 4] = [
+                min(max_costs[0], limit),
+                min(max_costs[1], limit),
+                min(max_costs[2], limit),
+                0,
+            ];
             let mut all_permutations = get_best_build_permutations(
                 &blueprint,
                 &production,
@@ -183,19 +192,30 @@ fn solve_part_one(blueprints: &Vec<[[usize; 3]; 4]>) -> usize {
                 max_geode = best_geode;
                 max_build_order = all_permutations.first().unwrap().1.clone();
             }
-            println!("    max_geode: {best_geode}, limit:{limit}");
+            if debug {
+                println!(
+                    "    max_geode: {best_geode}, production_limit:[{},{},{}]",
+                    production_limit[0], production_limit[1], production_limit[2]
+                );
+            }
         }
         let quality = (id + 1) * max_geode;
-        println!("Blueprint {}: max_geode: {max_geode}, quality:{quality}", id + 1);
-        print_build_order(&max_build_order);
+        if debug {
+            println!(
+                "Blueprint {}: max_geode: {max_geode}, quality:{quality}",
+                id + 1
+            );
+            print_build_order(&max_build_order);
+        }
 
+        geodes_per_blueprint.push(max_geode);
         quality_sum += quality;
         // break;
     }
-    return quality_sum;
+    return (quality_sum, geodes_per_blueprint);
 }
 
-fn get_cost_from_string(cost_as_string: String) -> [usize; 3] {
+fn get_cost_from_string(cost_as_string: String, debug: bool) -> [usize; 3] {
     let mut cost = [0, 0, 0];
     let cost_per_material = cost_as_string.split(" and ");
 
@@ -208,12 +228,14 @@ fn get_cost_from_string(cost_as_string: String) -> [usize; 3] {
             _ => (),
         }
     }
-    println!("{cost_as_string}");
-    println!("[{},{},{}]", cost[0], cost[1], cost[2]);
+    if debug {
+        println!("{cost_as_string}");
+        println!("[{},{},{}]", cost[0], cost[1], cost[2]);
+    }
     return cost;
 }
 
-pub fn solver() {
+pub fn solver(debug: bool) {
     let input = fs::read_to_string("./src/day19/input.txt")
         .expect("Should have been able to read the file");
     let blueprints_string: Vec<&str> = input.split("\r\n").collect();
@@ -225,11 +247,11 @@ pub fn solver() {
         let split2: Vec<&str> = split1[1].split(". Each clay robot costs ").collect();
         let split3: Vec<&str> = split2[1].split(". Each obsidian robot costs ").collect();
         let split4: Vec<&str> = split3[1].split(". Each geode robot costs ").collect();
-        let ore_robot_cost: [usize; 3] = get_cost_from_string(split2[0].to_string());
-        let clay_robot_cost: [usize; 3] = get_cost_from_string(split3[0].to_string());
-        let obsidian_robot_cost: [usize; 3] = get_cost_from_string(split4[0].to_string());
+        let ore_robot_cost: [usize; 3] = get_cost_from_string(split2[0].to_string(), debug);
+        let clay_robot_cost: [usize; 3] = get_cost_from_string(split3[0].to_string(), debug);
+        let obsidian_robot_cost: [usize; 3] = get_cost_from_string(split4[0].to_string(), debug);
         let geode_robot_cost: [usize; 3] =
-            get_cost_from_string((split4[1][..split4[1].len() - 1]).to_string());
+            get_cost_from_string((split4[1][..split4[1].len() - 1]).to_string(), debug);
         blueprints.push([
             ore_robot_cost,
             clay_robot_cost,
@@ -237,8 +259,16 @@ pub fn solver() {
             geode_robot_cost,
         ]);
     }
-    println!("Day19:");
 
-    let max_quality = solve_part_one(&blueprints);
-    println!("Max Quality: {max_quality}");
+    let (max_quality, _) = solve(&blueprints, 24, debug);
+
+    let (_, max_geodes) = solve(&(blueprints[..3].to_vec()), 32, debug);
+    let mut multiplication_of_max_geodes = 1;
+    for max_geode in max_geodes {
+        multiplication_of_max_geodes *= max_geode;
+    }
+
+    println!("Day19:");
+    println!("Part one max quality: {max_quality}");
+    println!("Part two multiplication of max geodes: {multiplication_of_max_geodes}");
 }

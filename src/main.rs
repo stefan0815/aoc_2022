@@ -19,5 +19,5 @@ pub mod day18;
 pub mod day19;
 
 fn main() {
-    day19::solver();
+    day19::solver(false);
 }
