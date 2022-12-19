@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, cmp::{max, min}};
 
 fn possible_robots(
     blueprint: &[[usize; 3]; 4],
@@ -139,25 +139,31 @@ fn get_best_build_permutations(
 }
 
 fn print_build_order(build_order: &Vec<usize>) {
-    print!("Build_order: [");
+    print!("    Build_order: [");
     for robot in build_order {
         print!("{robot},");
     }
     println!("]");
 }
+
 fn solve_part_one(blueprints: &Vec<[[usize; 3]; 4]>) -> usize {
+    let production: [usize; 4] = [1, 0, 0, 0];
+    let storage: [usize; 4] = [0, 0, 0, 0];
+    let time = 24;
     let mut quality_sum = 0;
+
     for (id, blueprint) in blueprints.iter().enumerate() {
+        let mut max_costs = [0,0,0];
+        for material_costs in blueprint{
+            max_costs[0] = max(max_costs[0], material_costs[0]);
+            max_costs[1] = max(max_costs[1], material_costs[1]);
+            max_costs[2] = max(max_costs[2], material_costs[2]);
+        }
+        println!("Blueprint {}", id + 1);
         let mut max_geode = 0;
         let mut max_build_order: Vec<usize> = Vec::new();
-        for limit in [2, 3, 5, 7, 0] {
-            let mut production_limit: [usize; 4] = [limit, limit, limit, 0];
-            if limit == 0 {
-                production_limit[2] = blueprint[3][2];
-            }
-            let production: [usize; 4] = [1, 0, 0, 0];
-            let storage: [usize; 4] = [0, 0, 0, 0];
-            let time = 24;
+        for limit in [2, 5, 7, time] {
+            let production_limit: [usize; 4] = [min(max_costs[0],limit), min(max_costs[1],limit), min(max_costs[2],limit), 0];
             let mut all_permutations = get_best_build_permutations(
                 &blueprint,
                 &production,
@@ -177,14 +183,13 @@ fn solve_part_one(blueprints: &Vec<[[usize; 3]; 4]>) -> usize {
                 max_geode = best_geode;
                 max_build_order = all_permutations.first().unwrap().1.clone();
             }
-            println!("max_geode: {best_geode}/{max_geode}, limit:{limit}");
-            print_build_order(&max_build_order);
-
-            // break;
+            println!("    max_geode: {best_geode}, limit:{limit}");
         }
         let quality = (id + 1) * max_geode;
-        println!("Blueprint {id}: {quality}");
-        quality_sum += (id + 1) * max_geode;
+        println!("Blueprint {}: max_geode: {max_geode}, quality:{quality}", id + 1);
+        print_build_order(&max_build_order);
+
+        quality_sum += quality;
         // break;
     }
     return quality_sum;
