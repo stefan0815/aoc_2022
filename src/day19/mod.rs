@@ -1,8 +1,4 @@
-use std::{
-    cmp::max,
-    collections::{HashMap, VecDeque},
-    fs,
-};
+use std::fs;
 
 fn possible_robots(
     blueprint: &[[usize; 3]; 4],
@@ -11,7 +7,9 @@ fn possible_robots(
 ) -> Vec<usize> {
     let mut possible_robots: Vec<usize> = Vec::new();
     for (robot_type, robot_cost) in blueprint.iter().enumerate() {
-        if production_limit[robot_type] > 0 && production[robot_type] >= production_limit[robot_type]{
+        if production_limit[robot_type] > 0
+            && production[robot_type] >= production_limit[robot_type]
+        {
             continue;
         }
         let mut buildable = true;
@@ -91,6 +89,13 @@ fn get_best_build_permutations(
     depth: usize,
 ) -> Vec<(usize, Vec<usize>)> {
     let mut all_possibilities: Vec<(usize, Vec<usize>)> = Vec::new();
+    let new_geode_gain: usize = (1..time).sum();
+    let max_geode_gain = new_geode_gain + (time * production[3]);
+    // println!("{time}:{max_geode_gain}");
+    if storage[3] + max_geode_gain <= early_break_limit {
+        all_possibilities.push((storage[3] + max_geode_gain, vec![]));
+        return all_possibilities;
+    }
     let possible_robots = possible_robots(&blueprint, &production, &production_limit);
     for robot_type in &possible_robots {
         let mut local_production = production.clone();
@@ -123,13 +128,66 @@ fn get_best_build_permutations(
         // }
 
         for local_possibility in local_possiblities {
-            let mut this_step = (local_storage[3], vec![*robot_type]);
-            this_step.0 += local_possibility.0;
+            // let mut this_step = (local_storage[3], vec![*robot_type]);
+            // this_step.0 += local_possibility.0;
+            let mut this_step = (local_possibility.0, vec![*robot_type]);
             this_step.1.append(&mut local_possibility.1.clone());
             all_possibilities.push(this_step);
         }
     }
     return all_possibilities;
+}
+
+fn print_build_order(build_order: &Vec<usize>) {
+    print!("Build_order: [");
+    for robot in build_order {
+        print!("{robot},");
+    }
+    println!("]");
+}
+fn solve_part_one(blueprints: &Vec<[[usize; 3]; 4]>) -> usize {
+    let mut quality_sum = 0;
+    for (id, blueprint) in blueprints.iter().enumerate() {
+        let mut max_geode = 0;
+        let mut max_build_order: Vec<usize> = Vec::new();
+        for limit in [2, 3, 5, 7, 0] {
+            let mut production_limit: [usize; 4] = [limit, limit, limit, 0];
+            if limit == 0 {
+                production_limit[2] = blueprint[3][2];
+            }
+            let production: [usize; 4] = [1, 0, 0, 0];
+            let storage: [usize; 4] = [0, 0, 0, 0];
+            let time = 24;
+            let mut all_permutations = get_best_build_permutations(
+                &blueprint,
+                &production,
+                &storage,
+                time,
+                &production_limit,
+                max_geode,
+                0,
+            );
+            all_permutations.sort_by(|a, b| b.0.cmp(&a.0));
+            // for permutation in &all_permutations{
+            //     println!("{}", permutation.0);
+            // }
+            let best_geode = all_permutations.first().unwrap().0;
+
+            if best_geode > max_geode {
+                max_geode = best_geode;
+                max_build_order = all_permutations.first().unwrap().1.clone();
+            }
+            println!("max_geode: {best_geode}/{max_geode}, limit:{limit}");
+            print_build_order(&max_build_order);
+
+            // break;
+        }
+        let quality = (id + 1) * max_geode;
+        println!("Blueprint {id}: {quality}");
+        quality_sum += (id + 1) * max_geode;
+        // break;
+    }
+    return quality_sum;
 }
 
 fn get_cost_from_string(cost_as_string: String) -> [usize; 3] {
@@ -176,28 +234,6 @@ pub fn solver() {
     }
     println!("Day19:");
 
-    let mut max_quality = 0;
-    for (id, blueprint) in blueprints.iter().enumerate() {
-        let production: [usize; 4] = [1, 0, 0, 0];
-        let storage: [usize; 4] = [0, 0, 0, 0];
-        let time = 24;
-        let production_limit:[usize; 4] = [1, 1, 1, 0];
-        let early_break_limit = 5;
-        let mut all_permutations = get_best_build_permutations(
-            &blueprint,
-            &production,
-            &storage,
-            time,
-            &production_limit,
-            early_break_limit,
-            0,
-        );
-        all_permutations.sort_by(|a, b| b.0.cmp(&a.0));
-        let max_geode = all_permutations.first().unwrap().0;
-        let quality = id * max_geode;
-        if quality > max_quality {
-            max_quality = quality;
-        }
-    }
+    let max_quality = solve_part_one(&blueprints);
     println!("Max Quality: {max_quality}");
 }
