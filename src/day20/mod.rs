@@ -12,36 +12,45 @@ fn move_distance(vec: &mut Vec<i128>, index: usize) {
     let distance = vec.remove(index);
     let wrap_length = vec.len() as i128;
     let mut new_index = index as i128 + distance;
-    if new_index < 0 {
-        new_index = new_index + ((new_index / wrap_length).abs() + 1) * wrap_length;
-    }
-    if new_index > wrap_length {
-        new_index = new_index % wrap_length;
-    }
+    new_index = ((new_index % wrap_length) + wrap_length) % wrap_length;
+
     if new_index == 0 {
         new_index = wrap_length;
     }
     vec.insert(new_index as usize, distance);
 }
 
-fn solve(encrypted_file: &Vec<i128>, iterations: usize, debug: bool) -> (Vec<i128>, i128) {
-    let mut encrypted_file_no_duplicates = encrypted_file.clone();
-    let wrap_length = encrypted_file.len() as i128 - 1;
-    let mut values: HashMap<i128, i128> = HashMap::new();
-    for value in &mut encrypted_file_no_duplicates {
+fn map_to_unique_vec(vec: &Vec<i128>) -> (Vec<i128>, HashMap<i128, i128>) {
+    let mut unique_vec = vec.clone();
+    let wrap_length = vec.len() as i128 - 1;
+    let mut values_mapping: HashMap<i128, i128> = HashMap::new();
+    for value in &mut unique_vec {
         let original_value = value.clone();
-        while values.contains_key(value) {
+        while values_mapping.contains_key(value) {
             let new_value = *value + wrap_length * value.signum();
             *value = new_value;
         }
-        values.insert(*value, original_value);
+        values_mapping.insert(*value, original_value);
     }
+    return (unique_vec, values_mapping);
+}
 
+fn get_original_value(vec: &Vec<i128>, index: usize, values_mapping: &HashMap<i128, i128>) -> i128 {
+    let mut value = vec[index % vec.len()];
+    if values_mapping.contains_key(&value) {
+        value = *values_mapping.get(&value).unwrap();
+    }
+    return value;
+}
+
+fn solve(encrypted_file: &Vec<i128>, iterations: usize, debug: bool) -> (Vec<i128>, i128) {
+    let wrap_length = encrypted_file.len() as i128 - 1;
+    let (encrypted_file_no_duplicates, values_mapping) = map_to_unique_vec(encrypted_file);
     let mut mixed_file_no_duplicates = encrypted_file_no_duplicates.clone();
 
     for _ in 0..iterations {
         for value in &encrypted_file_no_duplicates {
-            if *value == 0 {
+            if *value == 0 && value % wrap_length == 0 {
                 continue;
             }
             let index = mixed_file_no_duplicates
@@ -63,23 +72,10 @@ fn solve(encrypted_file: &Vec<i128>, iterations: usize, debug: bool) -> (Vec<i12
         .iter()
         .position(|val| *val == 0)
         .unwrap();
-    let pos_1000 = (pos_zero + 1000) % encrypted_file.len();
-    let pos_2000 = (pos_zero + 2000) % encrypted_file.len();
-    let pos_3000 = (pos_zero + 3000) % encrypted_file.len();
-
-    let mut value_at_pos_1000 = mixed_file_no_duplicates[pos_1000];
-    if values.contains_key(&mixed_file_no_duplicates[pos_1000]) {
-        value_at_pos_1000 = *values.get(&value_at_pos_1000).unwrap();
-    }
-    let mut value_at_pos_2000 = mixed_file_no_duplicates[pos_2000];
-    if values.contains_key(&value_at_pos_2000) {
-        value_at_pos_2000 = *values.get(&value_at_pos_2000).unwrap();
-    }
-    let mut value_at_pos_3000 = mixed_file_no_duplicates[pos_3000];
-    if values.contains_key(&value_at_pos_3000) {
-        value_at_pos_3000 = *values.get(&value_at_pos_3000).unwrap();
-    }
-    let sum_part_one = value_at_pos_1000 + value_at_pos_2000 + value_at_pos_3000;
+    let sum_part_one =
+        get_original_value(&mixed_file_no_duplicates, pos_zero + 1000, &values_mapping)
+            + get_original_value(&mixed_file_no_duplicates, pos_zero + 2000, &values_mapping)
+            + get_original_value(&mixed_file_no_duplicates, pos_zero + 3000, &values_mapping);
     return (mixed_file_no_duplicates, sum_part_one);
 }
 
