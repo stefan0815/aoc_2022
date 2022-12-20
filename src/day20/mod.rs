@@ -99,7 +99,10 @@ pub fn solver(debug: bool) {
     println!("Sum of part one: {sum_part_one}");
 
     let encryption_key = 811589153;
-    let encrypted_file_with_key:Vec<i128> = encrypted_file.iter().map(|value| value * encryption_key).collect();
+    let encrypted_file_with_key: Vec<i128> = encrypted_file
+        .iter()
+        .map(|value| value * encryption_key)
+        .collect();
     let (_, sum_part_two) = solve(&encrypted_file_with_key, 10, debug);
     println!("Sum of part two: {sum_part_two}");
 }
@@ -136,5 +139,34 @@ mod tests {
         let mut vec: Vec<i128> = vec![4, -2, 5, 6, 7, 8, 9];
         move_distance(&mut vec, 1);
         assert_eq!(vec![4, 5, 6, 7, 8, -2, 9], vec);
+    }
+
+    #[test]
+    fn day20_part_1() {
+        let input = fs::read_to_string("./src/day20/input.txt")
+            .expect("Should have been able to read the file");
+        let encrypted_file: Vec<i128> = input
+            .split("\r\n")
+            .map(|line| line.parse::<i128>().unwrap())
+            .collect();
+        let (_, sum_part_one) = solve(&encrypted_file, 1, false);
+        assert_eq!(8764, sum_part_one);
+    }
+
+    #[test]
+    fn day20_part_2() {
+        let input = fs::read_to_string("./src/day20/input.txt")
+            .expect("Should have been able to read the file");
+        let encrypted_file: Vec<i128> = input
+            .split("\r\n")
+            .map(|line| line.parse::<i128>().unwrap())
+            .collect();
+        let encryption_key = 811589153;
+        let encrypted_file_with_key: Vec<i128> = encrypted_file
+            .iter()
+            .map(|value| value * encryption_key)
+            .collect();
+        let (_, sum_part_one) = solve(&encrypted_file_with_key, 10, false);
+        assert_eq!(535648840980, sum_part_one);
     }
 }
