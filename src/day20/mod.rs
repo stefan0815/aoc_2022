@@ -1,4 +1,4 @@
-use std::fs;
+use std::{fs, collections::HashMap};
 
 fn print_vec(name: &str, vec: &Vec<i32>) {
     print!("{name}: [");
@@ -8,8 +8,7 @@ fn print_vec(name: &str, vec: &Vec<i32>) {
     println!("]");
 }
 
-fn move_distance(vec: &mut Vec<i32>, value: i32) {
-    let index = vec.iter().position(|val| *val == value).unwrap();
+fn move_distance(vec: &mut Vec<i32>, index: usize) {
     let distance = vec.remove(index);
     let wrap_length = vec.len() as i32;
     let mut new_index = index as i32 + distance;
@@ -25,39 +24,105 @@ fn move_distance(vec: &mut Vec<i32>, value: i32) {
     vec.insert(new_index as usize, distance);
 }
 
-pub fn solver(debug: bool) {
-    let input = fs::read_to_string("./src/day20/input.txt")
-        .expect("Should have been able to read the file");
-    let file: Vec<i32> = input
-        .split("\r\n")
-        .map(|line| line.parse::<i32>().unwrap())
-        .collect();
-    let mut mixed_file = file.clone();
-    if debug {
-        print_vec("file", &file);
+fn solve_part_one(encrypted_file: Vec<i32>, debug: bool) -> (Vec<i32>, i32) {
+    let mut encrypted_file_no_duplicates = encrypted_file.clone();
+    let wrap_length = encrypted_file.len() as i32 - 1;
+    let mut values: HashMap<i32,i32> = HashMap::new();
+    for value in &mut encrypted_file_no_duplicates{
+        let original_value = value.clone();
+        while values.contains_key(value){
+            let new_value = *value + wrap_length * value.signum();
+            *value = new_value;
+        }
+        values.insert(*value, original_value);
     }
 
-    println!("file length: {}", file.len());
-    for value in &file {
-        if *value == 0 || (*value).abs() as usize == file.len() {
+
+    let mut mixed_file_no_duplicates = encrypted_file_no_duplicates.clone();
+    // let mut mixed_file = encrypted_file.clone();
+    for value in &encrypted_file_no_duplicates {
+        if *value == 0 {
             continue;
         }
 
-        move_distance(&mut mixed_file, *value);
+        let index = mixed_file_no_duplicates.iter().position(|val| val == value).unwrap();
+        
+        move_distance(&mut mixed_file_no_duplicates, index);
+        // move_distance(&mut mixed_file, index);
         if debug {
-            print_vec("mixed_file after move", &mixed_file);
+            print_vec("mixed_file_no_duplicates after move", &mixed_file_no_duplicates);
         }
     }
 
-    print_vec("mixed_file", &mixed_file);
-    let pos_zero = mixed_file.iter().position(|val| *val == 0).unwrap();
-    let pos_1000 = (pos_zero + 1000) % file.len();
-    let pos_2000 = (pos_zero + 2000) % file.len();
-    let pos_3000 = (pos_zero + 3000) % file.len();
-    println!("{}", mixed_file[pos_1000]);
-    println!("{}", mixed_file[pos_2000]);
-    println!("{}", mixed_file[pos_3000]);
-    let sum_part_one = mixed_file[pos_1000] + mixed_file[pos_2000] + mixed_file[pos_3000];
+    let pos_zero = mixed_file_no_duplicates.iter().position(|val| *val == 0).unwrap();
+    let pos_1000 = (pos_zero + 1000) % encrypted_file.len();
+    let pos_2000 = (pos_zero + 2000) % encrypted_file.len();
+    let pos_3000 = (pos_zero + 3000) % encrypted_file.len();
+
+    let mut value_at_pos_1000 = mixed_file_no_duplicates[pos_1000];
+    if values.contains_key(&mixed_file_no_duplicates[pos_1000]){
+        value_at_pos_1000 = *values.get(&value_at_pos_1000).unwrap();
+    }
+    let mut value_at_pos_2000 = mixed_file_no_duplicates[pos_2000];
+    if values.contains_key(&value_at_pos_2000){
+        value_at_pos_2000 = *values.get(&value_at_pos_2000).unwrap();
+    }
+    let mut value_at_pos_3000 = mixed_file_no_duplicates[pos_3000];
+    if values.contains_key(&value_at_pos_3000){
+        value_at_pos_3000 = *values.get(&value_at_pos_3000).unwrap();
+    }
+    let sum_part_one = value_at_pos_1000 + value_at_pos_2000 + value_at_pos_3000;
+    return (mixed_file_no_duplicates, sum_part_one);
+}
+
+pub fn solver(debug: bool) {
+    let input = fs::read_to_string("./src/day20/input.txt")
+        .expect("Should have been able to read the file");
+    let encrypted_file: Vec<i32> = input
+        .split("\r\n")
+        .map(|line| line.parse::<i32>().unwrap())
+        .collect();
+    if debug {
+        print_vec("file", &encrypted_file);
+        println!("file length: {}", encrypted_file.len());
+    }
+
+    let (_, sum_part_one) = solve_part_one(encrypted_file, debug);
     println!("Day20:");
     println!("Sum of part one: {sum_part_one}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn day20_solve_example() {
+        let encrypted_file: Vec<i32> = vec![1, 2, -3, 3, -2, 0, 4];
+        let (mixed_file, sum_part_one) = solve_part_one(encrypted_file, false);
+
+        assert_eq!(vec![1, 2, -3, 4, 0, 3, -2], mixed_file);
+        assert_eq!(3, sum_part_one);
+    }
+
+    #[test]
+    fn day20_move_example_partial() {
+        let mut vec: Vec<i32> = vec![1, 2, -2, -3, 0, 3, 4];
+        move_distance(&mut vec,2);
+        assert_eq!(vec![1, 2, -3, 0, 3, 4, -2], vec);
+    }
+
+    #[test]
+    fn day20_move_example_one_line_1() {
+        let mut vec: Vec<i32> = vec![4, 5, 6, 1, 7, 8, 9];
+        move_distance(&mut vec,3);
+        assert_eq!(vec![4, 5, 6, 7, 1, 8, 9], vec);
+    }
+
+    #[test]
+    fn day20_move_example_one_line_2() {
+        let mut vec: Vec<i32> = vec![4, -2, 5, 6, 7, 8, 9];
+        move_distance(&mut vec,1);
+        assert_eq!(vec![4, 5, 6, 7, 8, -2, 9], vec);
+    }
 }
