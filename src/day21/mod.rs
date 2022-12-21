@@ -1,12 +1,12 @@
-use std::{collections::HashMap, fs, cmp::max};
+use std::{cmp::max, collections::HashMap, fs};
 
-// fn print_vec(name: String, vec: &Vec<i128>) {
-//     print!("{name}: [");
-//     for val in vec {
-//         print!("{val},");
-//     }
-//     println!("]");
-// }
+fn print_vec(name: String, vec: &Vec<i128>) {
+    print!("{name}: [");
+    for val in vec {
+        print!("{val},");
+    }
+    println!("]");
+}
 
 fn apply_operator(left: i128, right: i128, operator: String) -> i128 {
     match operator.as_str() {
@@ -98,6 +98,8 @@ fn solve_part_two(
     number_monkeys_in: &HashMap<String, i128>,
     expression_monkeys_in: &HashMap<String, (String, String, String)>,
     root: &(String, String),
+    num_ranges: i128,
+    debug: bool,
 ) -> i128 {
     let mut number_monkeys = number_monkeys_in.clone();
     let mut expression_monkeys = expression_monkeys_in.clone();
@@ -107,12 +109,13 @@ fn solve_part_two(
         expand_root(&number_monkeys, &expression_monkeys, root);
 
     let mut range = (i64::MIN as i128, i64::MAX as i128);
+    let num_increments = max(2, num_ranges - 1);
     loop {
         let mut metrics: Vec<i128> = Vec::new();
-        let increment = max((range.1 - range.0) / 10, 1);
+        let increment = max((range.1 - range.0) / num_increments, 1);
         let mut ranges: Vec<i128> = Vec::new();
         ranges.push(range.0);
-        for i in 1..10 {
+        for i in 1..num_increments {
             ranges.push(range.0 + increment * i);
         }
         ranges.push(range.1);
@@ -121,26 +124,34 @@ fn solve_part_two(
             expanded_number_monkeys.insert("humn".to_owned(), *human_yells);
             let (left, right) =
                 evaluate_root(&expanded_number_monkeys, &expanded_expression_monkeys, root);
-            // println!("human_yells: {human_yells}: {left} == {right}");
             if left == right {
                 return *human_yells;
             }
             metrics.push(left - right);
         }
+        if debug {
+            print_vec("ranges: ".to_string(), &ranges);
+            print_vec("metrics: ".to_string(), &metrics);
+        }
         for i in 0..metrics.len() - 1 {
             if metrics[i].signum() != metrics[i + 1].signum() {
                 range = (ranges[i], ranges[i + 1]);
-                println!(
-                    "range: [{}..{}] metric: [{},{}]",
-                    range.0, range.1, metrics[i], metrics[i + 1]
-                );
+                if debug {
+                    println!(
+                        "new range: [{}..{}] metric: [{},{}]",
+                        range.0,
+                        range.1,
+                        metrics[i],
+                        metrics[i + 1]
+                    );
+                }
                 break;
             }
         }
     }
 }
 
-pub fn solver(_debug: bool) {
+pub fn solver(debug: bool) {
     let input = fs::read_to_string("./src/day21/input.txt")
         .expect("Should have been able to read the file");
     let monkeys_str: Vec<&str> = input.split("\r\n").collect();
@@ -174,6 +185,6 @@ pub fn solver(_debug: bool) {
     let root_yells = solve_part_one(&number_monkeys, &expression_monkeys);
     println!("Monkey named root yells: {root_yells}");
 
-    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root);
+    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 5, debug);
     println!("Human should yell: {human_yells}");
 }
