@@ -1,6 +1,7 @@
 use std::{cmp::max, collections::HashMap, fs};
 
-fn print_vec(name: String, vec: &Vec<i128>) {
+
+fn print_vec<T:std::fmt::Display>(name: String, vec: &Vec<T>) {
     print!("{name}: [");
     for val in vec {
         print!("{val},");
@@ -8,24 +9,24 @@ fn print_vec(name: String, vec: &Vec<i128>) {
     println!("]");
 }
 
-fn apply_operator(left: i128, right: i128, operator: String) -> i128 {
+fn apply_operator(left: f64, right: f64, operator: String) -> f64 {
     match operator.as_str() {
         "+" => return left + right,
         "-" => return left - right,
         "*" => return left * right,
         "/" => return left / right,
-        _ => return 0,
+        _ => return 0 as f64,
     }
 }
 
 fn apply(
-    number_monkeys: &HashMap<String, i128>,
+    number_monkeys: &HashMap<String, f64>,
     expression_monkeys: &HashMap<String, (String, String, String)>,
 ) -> (
-    HashMap<String, i128>,
+    HashMap<String, f64>,
     HashMap<String, (String, String, String)>,
 ) {
-    let mut new_number_monkeys: HashMap<String, i128> = number_monkeys.clone();
+    let mut new_number_monkeys: HashMap<String, f64> = number_monkeys.clone();
     let mut new_expression_monkeys: HashMap<String, (String, String, String)> = HashMap::new();
     for (monkey_name, (left_monkey, operator, right_right)) in expression_monkeys {
         if new_number_monkeys.contains_key(left_monkey)
@@ -50,9 +51,9 @@ fn apply(
 }
 
 fn solve_part_one(
-    number_monkeys_in: &HashMap<String, i128>,
+    number_monkeys_in: &HashMap<String, f64>,
     expression_monkeys_in: &HashMap<String, (String, String, String)>,
-) -> i128 {
+) -> f64 {
     let mut number_monkeys = number_monkeys_in.clone();
     let mut expression_monkeys = expression_monkeys_in.clone();
     while !number_monkeys.contains_key("root") {
@@ -62,10 +63,10 @@ fn solve_part_one(
 }
 
 fn evaluate_root(
-    number_monkeys_in: &HashMap<String, i128>,
+    number_monkeys_in: &HashMap<String, f64>,
     expression_monkeys_in: &HashMap<String, (String, String, String)>,
     root: &(String, String),
-) -> (i128, i128) {
+) -> (f64, f64) {
     let mut number_monkeys = number_monkeys_in.clone();
     let mut expression_monkeys = expression_monkeys_in.clone();
     while !number_monkeys.contains_key(&root.0) || !number_monkeys.contains_key(&root.1) {
@@ -78,11 +79,11 @@ fn evaluate_root(
 }
 
 fn expand_root(
-    number_monkeys_in: &HashMap<String, i128>,
+    number_monkeys_in: &HashMap<String, f64>,
     expression_monkeys_in: &HashMap<String, (String, String, String)>,
     root: &(String, String),
 ) -> (
-    HashMap<String, i128>,
+    HashMap<String, f64>,
     HashMap<String, (String, String, String)>,
 ) {
     let mut number_monkeys = number_monkeys_in.clone();
@@ -95,12 +96,12 @@ fn expand_root(
 }
 
 fn solve_part_two(
-    number_monkeys_in: &HashMap<String, i128>,
+    number_monkeys_in: &HashMap<String, f64>,
     expression_monkeys_in: &HashMap<String, (String, String, String)>,
     root: &(String, String),
     num_ranges: i128,
     debug: bool,
-) -> i128 {
+) -> f64 {
     let mut number_monkeys = number_monkeys_in.clone();
     let mut expression_monkeys = expression_monkeys_in.clone();
     number_monkeys.remove("humn");
@@ -111,21 +112,21 @@ fn solve_part_two(
     let mut range = (i64::MIN as i128, i64::MAX as i128);
     let num_increments = max(2, num_ranges - 1);
     loop {
-        let mut metrics: Vec<i128> = Vec::new();
+        let mut metrics: Vec<f64> = Vec::new();
         let increment = max((range.1 - range.0) / num_increments, 1);
         let mut ranges: Vec<i128> = Vec::new();
-        ranges.push(range.0);
+        ranges.push(range.0 as i128);
         for i in 1..num_increments {
             ranges.push(range.0 + increment * i);
         }
-        ranges.push(range.1);
+        ranges.push(range.1 as i128);
 
         for human_yells in &ranges {
-            expanded_number_monkeys.insert("humn".to_owned(), *human_yells);
+            expanded_number_monkeys.insert("humn".to_owned(), *human_yells  as f64);
             let (left, right) =
                 evaluate_root(&expanded_number_monkeys, &expanded_expression_monkeys, root);
-            if increment == 1 && left == right {
-                return *human_yells;
+            if  left == right {
+                return *human_yells as f64;
             }
             metrics.push(left - right);
         }
@@ -154,14 +155,14 @@ fn solve_part_two(
 fn get_input(
     file: &str,
 ) -> (
-    HashMap<String, i128>,
+    HashMap<String, f64>,
     HashMap<String, (String, String, String)>,
     (String, String),
 ) {
     let input = fs::read_to_string(file).expect("Should have been able to read the file");
     let monkeys_str: Vec<&str> = input.split("\r\n").collect();
 
-    let mut number_monkeys: HashMap<String, i128> = HashMap::new();
+    let mut number_monkeys: HashMap<String, f64> = HashMap::new();
     let mut expression_monkeys: HashMap<String, (String, String, String)> = HashMap::new();
     let mut root: (String, String) = ("".to_owned(), "".to_owned());
     for monkey_str in monkeys_str {
@@ -169,7 +170,7 @@ fn get_input(
         let monkey_name = split[0];
         let split1: Vec<&str> = split[1].split(" ").collect();
         if split1.len() == 1 {
-            let monkey_number = split1[0].parse::<i128>().unwrap();
+            let monkey_number = split1[0].parse::<f64>().unwrap();
             number_monkeys.insert(monkey_name.to_string(), monkey_number);
             continue;
         }
@@ -194,7 +195,7 @@ pub fn solver(debug: bool) {
     let root_yells = solve_part_one(&number_monkeys, &expression_monkeys);
     println!("Monkey named root yells: {root_yells}");
 
-    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 10, debug);
+    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 5, debug);
     println!("Human should yell: {human_yells}");
 }
 
@@ -207,7 +208,7 @@ mod tests {
         let (number_monkeys, expression_monkeys, root) = get_input("./src/day21/example_input.txt");
         let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 5, false);
 
-        assert_eq!(301, human_yells);
+        assert_eq!(301.0, human_yells);
     }
 
     #[test]
@@ -215,28 +216,26 @@ mod tests {
         let (number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
         let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 10, false);
 
-        assert_eq!(3469704905529, human_yells);
+        assert_eq!(3469704905529.0, human_yells);
     }
 
     #[test]
     fn day21_check_part_two_solution() {
         let (mut number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
-        number_monkeys.insert("humn".to_owned(), 3469704905529);
+        number_monkeys.insert("humn".to_owned(), 3469704905529.0);
         let (left_yells, right_yells) = evaluate_root(&number_monkeys, &expression_monkeys, &root);
 
-        assert_eq!(24376746909942, left_yells);
-        assert_eq!(24376746909942, right_yells);
+        assert_eq!(24376746909942.0, left_yells);
+        assert_eq!(24376746909942.0, right_yells);
         assert_eq!(left_yells, right_yells);
     }
 
     #[test]
-    fn day21_check_part_two_rejected_solution() {
+    fn day21_check_part_two_integer_division_solution() {
         let (mut number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
-        number_monkeys.insert("humn".to_owned(), 3469704905531);
+        number_monkeys.insert("humn".to_owned(), 3469704905531.0);
         let (left_yells, right_yells) = evaluate_root(&number_monkeys, &expression_monkeys, &root);
 
-        assert_eq!(24376746909942, left_yells);
-        assert_eq!(24376746909942, right_yells);
-        assert_eq!(left_yells, right_yells);
+        assert_ne!(left_yells, right_yells);
     }
 }
