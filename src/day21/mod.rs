@@ -151,9 +151,14 @@ fn solve_part_two(
     }
 }
 
-pub fn solver(debug: bool) {
-    let input = fs::read_to_string("./src/day21/input.txt")
-        .expect("Should have been able to read the file");
+fn get_input(
+    file: &str,
+) -> (
+    HashMap<String, i128>,
+    HashMap<String, (String, String, String)>,
+    (String, String),
+) {
+    let input = fs::read_to_string(file).expect("Should have been able to read the file");
     let monkeys_str: Vec<&str> = input.split("\r\n").collect();
 
     let mut number_monkeys: HashMap<String, i128> = HashMap::new();
@@ -180,11 +185,58 @@ pub fn solver(debug: bool) {
             ),
         );
     }
+    return (number_monkeys, expression_monkeys, root);
+}
 
+pub fn solver(debug: bool) {
+    let (number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
     println!("Day21:");
     let root_yells = solve_part_one(&number_monkeys, &expression_monkeys);
     println!("Monkey named root yells: {root_yells}");
 
-    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 5, debug);
+    let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 10, debug);
     println!("Human should yell: {human_yells}");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn day21_solve_part_two_example() {
+        let (number_monkeys, expression_monkeys, root) = get_input("./src/day21/example_input.txt");
+        let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 5, false);
+
+        assert_eq!(301, human_yells);
+    }
+
+    #[test]
+    fn day21_solve_part_two_10_ranges() {
+        let (number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
+        let human_yells = solve_part_two(&number_monkeys, &expression_monkeys, &root, 10, false);
+
+        assert_eq!(3469704905529, human_yells);
+    }
+
+    #[test]
+    fn day21_check_part_two_solution() {
+        let (mut number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
+        number_monkeys.insert("humn".to_owned(), 3469704905529);
+        let (left_yells, right_yells) = evaluate_root(&number_monkeys, &expression_monkeys, &root);
+
+        assert_eq!(24376746909942, left_yells);
+        assert_eq!(24376746909942, right_yells);
+        assert_eq!(left_yells, right_yells);
+    }
+
+    #[test]
+    fn day21_check_part_two_rejected_solution() {
+        let (mut number_monkeys, expression_monkeys, root) = get_input("./src/day21/input.txt");
+        number_monkeys.insert("humn".to_owned(), 3469704905531);
+        let (left_yells, right_yells) = evaluate_root(&number_monkeys, &expression_monkeys, &root);
+
+        assert_eq!(24376746909942, left_yells);
+        assert_eq!(24376746909942, right_yells);
+        assert_eq!(left_yells, right_yells);
+    }
 }
