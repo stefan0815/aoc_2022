@@ -124,7 +124,7 @@ fn solve_part_two(
             expanded_number_monkeys.insert("humn".to_owned(), *human_yells);
             let (left, right) =
                 evaluate_root(&expanded_number_monkeys, &expanded_expression_monkeys, root);
-            if left == right {
+            if increment == 1 && left == right {
                 return *human_yells;
             }
             metrics.push(left - right);
