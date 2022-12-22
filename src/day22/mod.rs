@@ -97,6 +97,54 @@ fn get_map_limits_in_facing_direction(
     }
 }
 
+
+fn advance_cube(
+    pos: &(usize, usize),
+    facing_direction: usize,
+    map: &HashMap<(usize, usize), char>,
+    map_dimensions: &(usize, usize),
+    debug: bool,
+) -> ((usize, usize),usize) {
+    let mut new_pos = pos.clone();
+    let mut new_facing_direction = facing_direction;
+    let (lower_limit, upper_limit) =
+        get_map_limits_in_facing_direction(pos, facing_direction, map, map_dimensions);
+    match facing_direction {
+        0 => new_pos.1 = max(lower_limit, (new_pos.1 + 1) % upper_limit),
+        1 => new_pos.0 = max(lower_limit, (new_pos.0 + 1) % upper_limit),
+        2 => {
+            if new_pos.1 as i32 - 1 < lower_limit as i32 {
+                new_pos.1 = upper_limit - 1;
+            } else {
+                new_pos.1 -= 1;
+            }
+        }
+        3 => {
+            if new_pos.0 as i32 - 1 < lower_limit as i32 {
+                new_pos.0 = upper_limit - 1;
+            } else {
+                new_pos.0 -= 1;
+            }
+        }
+        _ => panic!("Invalid facing direction {facing_direction}"),
+    }
+    if debug {
+        println!("Lower limit: {lower_limit}, Upper limit: {upper_limit}");
+        println!(
+            "Facing: {}, Move from ({},{}) -> ({},{})",
+            facing_direction_as_char(facing_direction),
+            pos.0,
+            pos.1,
+            new_pos.0,
+            new_pos.1
+        );
+    }
+    if *map.get(&new_pos).unwrap() == '#' {
+        return (*pos, facing_direction);
+    }
+    return (new_pos, new_facing_direction);
+}
+
 fn advance(
     pos: &(usize, usize),
     facing_direction: usize,
@@ -148,6 +196,7 @@ fn process_instructions(
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
     instructions: &Vec<String>,
+    cube_wrapping: bool,
     debug: bool,
 ) -> ((usize, usize), usize, HashMap<(usize, usize), char>) {
     let mut pos = start.clone();
@@ -163,11 +212,21 @@ fn process_instructions(
         }
         let distance: usize = instruction.parse().unwrap();
         for _ in 0..distance {
-            let new_pos = advance(&pos, facing_direction, map, map_dimensions, debug);
+
+            let new_pos;
+            let new_facing_direction;
+            if cube_wrapping{
+                (new_pos, new_facing_direction) = advance_cube(&pos, facing_direction, map, map_dimensions, debug);
+            } else {
+                new_pos = advance(&pos, facing_direction, map, map_dimensions, debug);
+                new_facing_direction = facing_direction;
+            }
+            
             if new_pos == pos {
                 break;
             }
             pos = new_pos;
+            facing_direction = new_facing_direction;
             path.insert(pos, facing_direction_as_char(facing_direction));
         }
     }
@@ -225,15 +284,16 @@ fn get_input(
     return (start, map, map_dimensions, instructions);
 }
 
-fn solve_part_one(
+fn solve(
     start: &(usize, usize),
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
     instructions: &Vec<String>,
+    cube_wrapping: bool,
     debug: bool,
 ) -> usize {
     let (end_position, facing_direction, path) =
-        process_instructions(&start, &map, &map_dimensions, &instructions, debug);
+        process_instructions(&start, &map, &map_dimensions, &instructions,cube_wrapping, debug);
 
     if debug {
         print_map_with_path(map, map_dimensions, &path);
@@ -242,12 +302,14 @@ fn solve_part_one(
     return password;
 }
 
+
 pub fn solver(debug: bool) {
     let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
-    let password = solve_part_one(&start, &map, &map_dimensions, &instructions, debug);
-
     println!("Day22:");
-    println!("Password part one: {password}");
+    let password_part_one = solve(&start, &map, &map_dimensions, &instructions, false, debug);
+    println!("Password part one: {password_part_one}");
+    let password_part_two = solve(&start, &map, &map_dimensions, &instructions, true, debug);
+    println!("Password part two: {password_part_two}");
 }
 
 #[cfg(test)]
@@ -271,7 +333,7 @@ mod tests {
     fn day22_example_process_instructions() {
         let (start, map, map_dimensions, instructions) = get_input("./src/day22/example_input.txt");
         let (end, facing_direction, path) =
-            process_instructions(&start, &map, &map_dimensions, &instructions, false);
+            process_instructions(&start, &map, &map_dimensions, &instructions, false, false);
         print_map_with_path(&map, &map_dimensions, &path);
 
         assert_eq!((5, 7), end);
@@ -289,7 +351,7 @@ mod tests {
     fn day22_process_instructions() {
         let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
         let (end, facing_direction, path) =
-            process_instructions(&start, &map, &map_dimensions, &instructions, false);
+            process_instructions(&start, &map, &map_dimensions, &instructions, false, false);
         print_map_with_path(&map, &map_dimensions, &path);
         println!(
             "End: ({},{}), facing: {}",
