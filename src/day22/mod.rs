@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, fs, hash::Hash};
+use std::{cmp::max, collections::HashMap, fs};
 
 #[allow(dead_code)]
 fn print_vec<T: std::fmt::Display>(name: String, vec: &Vec<T>) {
@@ -97,14 +97,6 @@ fn get_map_limits_in_facing_direction(
     }
 }
 
-fn get_cube_hash(
-    map: &HashMap<(usize, usize), char>,
-    map_dimensions: &(usize, usize),
-) -> HashMap<(i32, i32), ((usize, usize), Vec<char>)> {
-    let mut cube_hash: HashMap<(i32, i32), ((usize, usize), Vec<char>)> = HashMap::new();
-    return cube_hash;
-}
-
 fn advance_cube(
     pos: &(usize, usize),
     facing_direction: usize,
@@ -112,30 +104,98 @@ fn advance_cube(
     map_dimensions: &(usize, usize),
     debug: bool,
 ) -> ((usize, usize), usize) {
-    let cube_hash = get_cube_hash(map, map_dimensions);
-    let mut new_pos_wrap: (i32, i32) = (pos.0 as i32, pos.1 as i32);
-    let mut new_pos = pos.clone();
+    // let cube_hash = get_cube_hash(map, map_dimensions);
+    let (lower_limit, upper_limit) =
+        get_map_limits_in_facing_direction(pos, facing_direction, map, map_dimensions);
+    let mut new_pos: (i32, i32) = (pos.0 as i32, pos.1 as i32);
     let mut new_facing_direction = facing_direction;
     match facing_direction {
-        0 => new_pos_wrap.1 = new_pos_wrap.1 + 1,
-        1 => new_pos_wrap.0 = new_pos_wrap.0 + 1,
-        2 => new_pos_wrap.1 = new_pos_wrap.1 - 1,
-        3 => new_pos_wrap.0 = new_pos_wrap.0 - 1,
+        0 => {
+            new_pos.1 = new_pos.1 + 1;
+            if new_pos.1 >= upper_limit as i32 {
+                if new_pos.0 < 50 {
+                    new_pos = (149 - new_pos.0, 99);
+                    new_facing_direction = 2;
+                } else if new_pos.0 < 100 {
+                    new_pos = (49, new_pos.0 + 50);
+                    new_facing_direction = 3;
+                } else if new_pos.0 < 150 {
+                    let diff = new_pos.0 - 100;
+                    new_pos = (49 - diff, 149);
+                    new_facing_direction = 2;
+                } else {
+                    new_pos = (149, new_pos.0 - 100);
+                    new_facing_direction = 3;
+                }
+            }
+        }
+        1 => {
+            new_pos.0 = new_pos.0 + 1;
+            if new_pos.0 >= upper_limit as i32 {
+                if new_pos.1 < 50 {
+                    new_pos = (0, new_pos.1 + 100);
+                } else if new_pos.1 < 100 {
+                    new_pos = (new_pos.1 + 100, 49);
+                    new_facing_direction = 2;
+                } else {
+                    new_pos = (new_pos.1 - 50, 99);
+                    new_facing_direction = 2;
+                }
+            }
+        }
+        2 => {
+            new_pos.1 = new_pos.1 - 1;
+            if new_pos.1 < lower_limit as i32 {
+                if new_pos.0 < 50 {
+                    let diff = 49 - new_pos.0;
+                    new_pos = (diff + 100, 0);
+                    new_facing_direction = 0;
+                } else if new_pos.0 < 100 {
+                    new_pos = (100, new_pos.0 - 50);
+                    new_facing_direction = 1;
+                } else if new_pos.0 < 150 {
+                    let diff = new_pos.0 - 100;
+                    new_pos = (49 - diff, 50);
+                    new_facing_direction = 0;
+                } else {
+                    new_pos = (0, new_pos.0 - 100);
+                    new_facing_direction = 1;
+                }
+            }
+        }
+        3 => {
+            new_pos.0 = new_pos.0 - 1;
+            if new_pos.0 < lower_limit as i32 {
+                if new_pos.1 < 50 {
+                    new_pos = (new_pos.1 + 50, 50);
+                    new_facing_direction = 0;
+                } else if new_pos.1 < 100 {
+                    new_pos = (new_pos.1 + 100, 0);
+                    new_facing_direction = 0;
+                } else {
+                    new_pos = (199, new_pos.1 - 100);
+                }
+            }
+        }
         _ => panic!("Invalid facing direction {facing_direction}"),
     }
 
-    if cube_hash.contains_key(&new_pos_wrap) {
-        let (new_pos_after_wrap, rotations) = cube_hash.get(&new_pos_wrap).unwrap();
-        new_pos = *new_pos_after_wrap;
-        for rotation in rotations {
-            new_facing_direction = perform_rotation(new_facing_direction, rotation.to_string())
-        }
+    let new_pos_usize = (new_pos.0 as usize, new_pos.1 as usize);
+    if debug {
+        println!(
+            "pos: ({},{}), facing_direction: {} -> new_pos: ({},{}), new_facing_direction: {}",
+            pos.0,
+            pos.1,
+            facing_direction_as_char(facing_direction),
+            new_pos_usize.0,
+            new_pos_usize.1,
+            facing_direction_as_char(new_facing_direction)
+        );
     }
-
-    if *map.get(&new_pos).unwrap() == '#' {
+    if *map.get(&new_pos_usize).unwrap() == '#' {
         return (*pos, facing_direction);
     }
-    return (new_pos, new_facing_direction);
+    return (new_pos_usize, new_facing_direction);
 }
 
 fn advance(
@@ -314,12 +374,12 @@ pub fn solver(debug: bool) {
 mod tests {
     use super::*;
 
-    #[test]
-    fn day22_print_input_example() {
-        let (_, map, map_dimensions, instructions) = get_input("./src/day22/example_input.txt");
-        print_map(&map, &map_dimensions);
-        print_vec("Instructions".to_owned(), &instructions);
-    }
+    // #[test]
+    // fn day22_print_input_example() {
+    //     let (_, map, map_dimensions, instructions) = get_input("./src/day22/example_input.txt");
+    //     print_map(&map, &map_dimensions);
+    //     print_vec("Instructions".to_owned(), &instructions);
+    // }
 
     #[test]
     fn day22_parse_example_check_start() {
@@ -330,34 +390,64 @@ mod tests {
     #[test]
     fn day22_example_process_instructions() {
         let (start, map, map_dimensions, instructions) = get_input("./src/day22/example_input.txt");
-        let (end, facing_direction, path) =
+        let (end, facing_direction, _) =
             process_instructions(&start, &map, &map_dimensions, &instructions, false, false);
-        print_map_with_path(&map, &map_dimensions, &path);
+        // print_map_with_path(&map, &map_dimensions, &path);
 
         assert_eq!((5, 7), end);
         assert_eq!(0, facing_direction);
     }
 
-    #[test]
-    fn day22_print_input() {
-        let (_, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
-        print_map(&map, &map_dimensions);
-        print_vec("Instructions".to_owned(), &instructions);
-    }
+    // #[test]
+    // fn day22_print_input() {
+    //     let (_, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+    //     print_map(&map, &map_dimensions);
+    //     print_vec("Instructions".to_owned(), &instructions);
+    // }
 
     #[test]
     fn day22_process_instructions() {
         let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
-        let (end, facing_direction, path) =
+        let (end, facing_direction, _) =
             process_instructions(&start, &map, &map_dimensions, &instructions, false, false);
-        print_map_with_path(&map, &map_dimensions, &path);
-        println!(
-            "End: ({},{}), facing: {}",
-            end.0,
-            end.1,
-            facing_direction_as_char(facing_direction)
-        )
-        // assert_eq!((5, 7), end);
-        // assert_eq!(0, facing_direction);
+        // print_map_with_path(&map, &map_dimensions, &path);
+        // println!(
+        //     "End: ({},{}), facing: {}",
+        //     end.0,
+        //     end.1,
+        //     facing_direction_as_char(facing_direction)
+        // );
+        assert_eq!((190, 1), end);
+        assert_eq!(2, facing_direction);
+    }
+
+    #[test]
+    fn day22_solve_part_one() {
+        let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+        let password_part_one = solve(&start, &map, &map_dimensions, &instructions, false, false);
+        assert_eq!(191010, password_part_one);
+    }
+
+    #[test]
+    fn day22_process_instructions_cube_wrapping() {
+        let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+        let (end, facing_direction, _) =
+            process_instructions(&start, &map, &map_dimensions, &instructions, true, false);
+        // print_map_with_path(&map, &map_dimensions, &path);
+        // println!(
+        //     "End: ({},{}), facing: {}",
+        //     end.0,
+        //     end.1,
+        //     facing_direction_as_char(facing_direction)
+        // );
+        assert_eq!((54, 90), end);
+        assert_eq!(0, facing_direction);
+    }
+
+    #[test]
+    fn day22_solve_part_two() {
+        let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+        let password_part_two = solve(&start, &map, &map_dimensions, &instructions, true, false);
+        assert_eq!(55364, password_part_two);
     }
 }
