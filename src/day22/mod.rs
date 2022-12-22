@@ -1,5 +1,6 @@
-use std::{cmp::max, collections::HashMap, fs, os::windows::process};
+use std::{cmp::max, collections::HashMap, fs};
 
+#[allow(dead_code)]
 fn print_vec<T: std::fmt::Display>(name: String, vec: &Vec<T>) {
     print!("{name}: [");
     for val in vec {
@@ -8,6 +9,7 @@ fn print_vec<T: std::fmt::Display>(name: String, vec: &Vec<T>) {
     println!("]");
 }
 
+#[allow(dead_code)]
 fn print_map(map: &HashMap<(usize, usize), char>, map_dimensions: &(usize, usize)) {
     for row in 0..map_dimensions.0 {
         for col in 0..map_dimensions.1 {
@@ -21,6 +23,35 @@ fn print_map(map: &HashMap<(usize, usize), char>, map_dimensions: &(usize, usize
     }
 }
 
+fn print_map_with_path(
+    map: &HashMap<(usize, usize), char>,
+    map_dimensions: &(usize, usize),
+    path: &HashMap<(usize, usize), char>,
+) {
+    for row in 0..map_dimensions.0 {
+        for col in 0..map_dimensions.1 {
+            if path.contains_key(&(row, col)) {
+                print!("{}", path.get(&(row, col)).unwrap());
+            } else if map.contains_key(&(row, col)) {
+                print!("{}", map.get(&(row, col)).unwrap());
+            } else {
+                print!(" ");
+            }
+        }
+        println!();
+    }
+}
+
+fn facing_direction_as_char(facing_direction: usize) -> char {
+    match facing_direction {
+        0 => return '>',
+        1 => return 'v',
+        2 => return '<',
+        3 => return '^',
+        _ => panic!("Invalid facing direction {facing_direction}"),
+    }
+}
+
 fn perform_rotation(facing_direction: usize, rotation: String) -> usize {
     match rotation.as_str() {
         "R" => return (facing_direction + 1) % 4,
@@ -29,23 +60,87 @@ fn perform_rotation(facing_direction: usize, rotation: String) -> usize {
     }
 }
 
-fn advance(
+fn get_map_limits_in_facing_direction(
     pos: &(usize, usize),
     facing_direction: usize,
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
 ) -> (usize, usize) {
-    let mut new_pos: (i32, i32) = (pos.0 as i32, pos.1 as i32);
+    let mut lower_limit = 0;
+    let mut lower_limit_initialized = false;
+    if facing_direction == 0 || facing_direction == 2 {
+        for col in 0..map_dimensions.1 {
+            if map.contains_key(&(pos.0, col)) {
+                if !lower_limit_initialized {
+                    lower_limit = col;
+                    lower_limit_initialized = true;
+                }
+            } else if lower_limit_initialized {
+                return (lower_limit, col);
+            }
+        }
+        return (lower_limit, map_dimensions.1);
+    } else if facing_direction == 1 || facing_direction == 3 {
+        for row in 0..map_dimensions.0 {
+            if map.contains_key(&(row, pos.1)) {
+                if !lower_limit_initialized {
+                    lower_limit = row;
+                    lower_limit_initialized = true;
+                }
+            } else if lower_limit_initialized {
+                return (lower_limit, row);
+            }
+        }
+        return (lower_limit, map_dimensions.0);
+    } else {
+        panic!("Invalid facing direction {facing_direction}");
+    }
+}
 
+fn advance(
+    pos: &(usize, usize),
+    facing_direction: usize,
+    map: &HashMap<(usize, usize), char>,
+    map_dimensions: &(usize, usize),
+    debug: bool,
+) -> (usize, usize) {
+    let mut new_pos = pos.clone();
+    let (lower_limit, upper_limit) =
+        get_map_limits_in_facing_direction(pos, facing_direction, map, map_dimensions);
     match facing_direction {
-        0 => new_pos = (new_pos.0, new_pos.1 + 1),
-        1 => new_pos = (new_pos.0 + 1, new_pos.1),
-        2 => new_pos = (new_pos.0, new_pos.1 - 1),
-        3 => new_pos = (new_pos.0 - 1, new_pos.1),
+        0 => new_pos.1 = max(lower_limit, (new_pos.1 + 1) % upper_limit),
+        1 => new_pos.0 = max(lower_limit, (new_pos.0 + 1) % upper_limit),
+        2 => {
+            if new_pos.1 as i32 - 1 < lower_limit as i32 {
+                new_pos.1 = upper_limit - 1;
+            } else {
+                new_pos.1 -= 1;
+            }
+        }
+        3 => {
+            if new_pos.0 as i32 - 1 < lower_limit as i32 {
+                new_pos.0 = upper_limit - 1;
+            } else {
+                new_pos.0 -= 1;
+            }
+        }
         _ => panic!("Invalid facing direction {facing_direction}"),
     }
-
-    return (new_pos.0 as usize, new_pos.1 as usize);
+    if debug {
+        println!("Lower limit: {lower_limit}, Upper limit: {upper_limit}");
+        println!(
+            "Facing: {}, Move from ({},{}) -> ({},{})",
+            facing_direction_as_char(facing_direction),
+            pos.0,
+            pos.1,
+            new_pos.0,
+            new_pos.1
+        );
+    }
+    if *map.get(&new_pos).unwrap() == '#' {
+        return *pos;
+    }
+    return new_pos;
 }
 
 fn process_instructions(
@@ -53,25 +148,31 @@ fn process_instructions(
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
     instructions: &Vec<String>,
-) -> ((usize, usize), usize) {
+    debug: bool,
+) -> ((usize, usize), usize, HashMap<(usize, usize), char>) {
     let mut pos = start.clone();
     let mut facing_direction: usize = 0; // 0: right, 1:down, 2:left, 3:up
+    let mut path: HashMap<(usize, usize), char> = HashMap::new();
+    path.insert(pos, 'o');
 
     for instruction in instructions {
         if instruction.as_str() == "R" || instruction.as_str() == "L" {
             facing_direction = perform_rotation(facing_direction, instruction.to_string());
+            path.insert(pos, facing_direction_as_char(facing_direction));
             continue;
         }
         let distance: usize = instruction.parse().unwrap();
         for _ in 0..distance {
-            let new_pos = advance(&pos, facing_direction, map, map_dimensions);
+            let new_pos = advance(&pos, facing_direction, map, map_dimensions, debug);
             if new_pos == pos {
                 break;
             }
             pos = new_pos;
+            path.insert(pos, facing_direction_as_char(facing_direction));
         }
     }
-    return (pos, facing_direction);
+    path.insert(pos, 'x');
+    return (pos, facing_direction, path);
 }
 
 fn get_input(
@@ -129,17 +230,22 @@ fn solve_part_one(
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
     instructions: &Vec<String>,
+    debug: bool,
 ) -> usize {
-    let (end_position, facing_direction) =
-        process_instructions(&start, &map, &map_dimensions, &instructions);
+    let (end_position, facing_direction, path) =
+        process_instructions(&start, &map, &map_dimensions, &instructions, debug);
 
+    if debug {
+        print_map_with_path(map, map_dimensions, &path);
+    }
     let password = 1000 * (end_position.0 + 1) + 4 * (end_position.1 + 1) + facing_direction;
     return password;
 }
 
 pub fn solver(debug: bool) {
     let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
-    let password = solve_part_one(&start, &map, &map_dimensions, &instructions);
+    let password = solve_part_one(&start, &map, &map_dimensions, &instructions, debug);
+
     println!("Day22:");
     println!("Password part one: {password}");
 }
@@ -162,11 +268,31 @@ mod tests {
     }
 
     #[test]
-    fn day22_process_instructions() {
+    fn day22_example_process_instructions() {
         let (start, map, map_dimensions, instructions) = get_input("./src/day22/example_input.txt");
-        let (end, facing_direction) = process_instructions(&start, &map, &map_dimensions, &instructions);
+        let (end, facing_direction, path) =
+            process_instructions(&start, &map, &map_dimensions, &instructions, false);
+        print_map_with_path(&map, &map_dimensions, &path);
 
         assert_eq!((5, 7), end);
         assert_eq!(0, facing_direction);
+    }
+
+    #[test]
+    fn day22_print_input() {
+        let (_, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+        print_map(&map, &map_dimensions);
+        print_vec("Instructions".to_owned(), &instructions);
+    }
+
+    #[test]
+    fn day22_process_instructions() {
+        let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
+        let (end, facing_direction, path) =
+            process_instructions(&start, &map, &map_dimensions, &instructions, false);
+        print_map_with_path(&map, &map_dimensions, &path);
+        println!("End: ({},{}), facing: {}", end.0, end.1, facing_direction_as_char(facing_direction))
+        // assert_eq!((5, 7), end);
+        // assert_eq!(0, facing_direction);
     }
 }
