@@ -1,4 +1,4 @@
-use std::{cmp::max, collections::HashMap, fs};
+use std::{cmp::max, collections::HashMap, fs, hash::Hash};
 
 #[allow(dead_code)]
 fn print_vec<T: std::fmt::Display>(name: String, vec: &Vec<T>) {
@@ -97,6 +97,13 @@ fn get_map_limits_in_facing_direction(
     }
 }
 
+fn get_cube_hash(
+    map: &HashMap<(usize, usize), char>,
+    map_dimensions: &(usize, usize),
+) -> HashMap<(i32, i32), ((usize, usize), Vec<char>)> {
+    let mut cube_hash: HashMap<(i32, i32), ((usize, usize), Vec<char>)> = HashMap::new();
+    return cube_hash;
+}
 
 fn advance_cube(
     pos: &(usize, usize),
@@ -104,41 +111,27 @@ fn advance_cube(
     map: &HashMap<(usize, usize), char>,
     map_dimensions: &(usize, usize),
     debug: bool,
-) -> ((usize, usize),usize) {
+) -> ((usize, usize), usize) {
+    let cube_hash = get_cube_hash(map, map_dimensions);
+    let mut new_pos_wrap: (i32, i32) = (pos.0 as i32, pos.1 as i32);
     let mut new_pos = pos.clone();
     let mut new_facing_direction = facing_direction;
-    let (lower_limit, upper_limit) =
-        get_map_limits_in_facing_direction(pos, facing_direction, map, map_dimensions);
     match facing_direction {
-        0 => new_pos.1 = max(lower_limit, (new_pos.1 + 1) % upper_limit),
-        1 => new_pos.0 = max(lower_limit, (new_pos.0 + 1) % upper_limit),
-        2 => {
-            if new_pos.1 as i32 - 1 < lower_limit as i32 {
-                new_pos.1 = upper_limit - 1;
-            } else {
-                new_pos.1 -= 1;
-            }
-        }
-        3 => {
-            if new_pos.0 as i32 - 1 < lower_limit as i32 {
-                new_pos.0 = upper_limit - 1;
-            } else {
-                new_pos.0 -= 1;
-            }
-        }
+        0 => new_pos_wrap.1 = new_pos_wrap.1 + 1,
+        1 => new_pos_wrap.0 = new_pos_wrap.0 + 1,
+        2 => new_pos_wrap.1 = new_pos_wrap.1 - 1,
+        3 => new_pos_wrap.0 = new_pos_wrap.0 - 1,
         _ => panic!("Invalid facing direction {facing_direction}"),
     }
-    if debug {
-        println!("Lower limit: {lower_limit}, Upper limit: {upper_limit}");
-        println!(
-            "Facing: {}, Move from ({},{}) -> ({},{})",
-            facing_direction_as_char(facing_direction),
-            pos.0,
-            pos.1,
-            new_pos.0,
-            new_pos.1
-        );
+
+    if cube_hash.contains_key(&new_pos_wrap) {
+        let (new_pos_after_wrap, rotations) = cube_hash.get(&new_pos_wrap).unwrap();
+        new_pos = *new_pos_after_wrap;
+        for rotation in rotations {
+            new_facing_direction = perform_rotation(new_facing_direction, rotation.to_string())
+        }
     }
+
     if *map.get(&new_pos).unwrap() == '#' {
         return (*pos, facing_direction);
     }
@@ -212,16 +205,16 @@ fn process_instructions(
         }
         let distance: usize = instruction.parse().unwrap();
         for _ in 0..distance {
-
             let new_pos;
             let new_facing_direction;
-            if cube_wrapping{
-                (new_pos, new_facing_direction) = advance_cube(&pos, facing_direction, map, map_dimensions, debug);
+            if cube_wrapping {
+                (new_pos, new_facing_direction) =
+                    advance_cube(&pos, facing_direction, map, map_dimensions, debug);
             } else {
                 new_pos = advance(&pos, facing_direction, map, map_dimensions, debug);
                 new_facing_direction = facing_direction;
             }
-            
+
             if new_pos == pos {
                 break;
             }
@@ -292,8 +285,14 @@ fn solve(
     cube_wrapping: bool,
     debug: bool,
 ) -> usize {
-    let (end_position, facing_direction, path) =
-        process_instructions(&start, &map, &map_dimensions, &instructions,cube_wrapping, debug);
+    let (end_position, facing_direction, path) = process_instructions(
+        &start,
+        &map,
+        &map_dimensions,
+        &instructions,
+        cube_wrapping,
+        debug,
+    );
 
     if debug {
         print_map_with_path(map, map_dimensions, &path);
@@ -301,7 +300,6 @@ fn solve(
     let password = 1000 * (end_position.0 + 1) + 4 * (end_position.1 + 1) + facing_direction;
     return password;
 }
-
 
 pub fn solver(debug: bool) {
     let (start, map, map_dimensions, instructions) = get_input("./src/day22/input.txt");
