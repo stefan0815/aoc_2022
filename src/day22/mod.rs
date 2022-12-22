@@ -217,7 +217,7 @@ fn get_input(
                 instructions.push("L".to_owned());
             }
         }
-        if index_right < instruction_split_right.len() - 1 {
+        if index_right < instructions_split_right.len() - 1 {
             instructions.push("R".to_owned());
         }
     }
@@ -291,7 +291,12 @@ mod tests {
         let (end, facing_direction, path) =
             process_instructions(&start, &map, &map_dimensions, &instructions, false);
         print_map_with_path(&map, &map_dimensions, &path);
-        println!("End: ({},{}), facing: {}", end.0, end.1, facing_direction_as_char(facing_direction))
+        println!(
+            "End: ({},{}), facing: {}",
+            end.0,
+            end.1,
+            facing_direction_as_char(facing_direction)
+        )
         // assert_eq!((5, 7), end);
         // assert_eq!(0, facing_direction);
     }
