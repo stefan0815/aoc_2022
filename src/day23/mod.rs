@@ -1,6 +1,7 @@
 use std::{
+    cmp::{max, min},
     collections::{HashMap, HashSet},
-    fs, cmp::{min, max},
+    fs,
 };
 
 #[allow(dead_code)]
@@ -13,9 +14,10 @@ fn print_vec<T: std::fmt::Display>(name: String, vec: &Vec<T>) {
 }
 
 #[allow(dead_code)]
-fn print_map(map: &HashSet<(usize, usize)>, map_dimensions: &(usize, usize)) {
-    for row in 0..map_dimensions.0 {
-        for col in 0..map_dimensions.1 {
+fn print_map(map: &HashSet<(i32, i32)>) {
+    let bounding_box = get_bounding_box(map);
+    for row in bounding_box.0 .0..bounding_box.0 .1 {
+        for col in bounding_box.1 .0..bounding_box.1 .1 {
             if map.contains(&(row, col)) {
                 print!("#");
             } else {
@@ -26,12 +28,29 @@ fn print_map(map: &HashSet<(usize, usize)>, map_dimensions: &(usize, usize)) {
     }
 }
 
+fn are_adjacent_positions_empty(map: &HashSet<(i32, i32)>, pos: &(i32, i32)) -> bool {
+    for row_diff in [-1,0,1] {
+        for col_diff in [-1,0,1]{
+            if row_diff == 0 && col_diff == 0 {
+                continue;
+            }
+            if map.contains(&(pos.0 + row_diff, pos.1 + col_diff)){
+                return false;
+            }
+        }
+    }
+    return true;
+}
+
 fn check(map: &HashSet<(i32, i32)>, pos: &(i32, i32), round: usize) -> (bool, (i32, i32)) {
     let round_mod_4 = round % 4;
     let directions: Vec<char> = vec!['N', 'S', 'W', 'E'];
+    if are_adjacent_positions_empty(map,pos) {
+        return (false, (0,0));
+    }
 
     for round_mod_4 in round_mod_4..round_mod_4 + 4 {
-        let direction = directions[round_mod_4];
+        let direction = directions[round_mod_4 % 4];
         let check_positions: Vec<(i32, i32)>;
         match direction {
             'N' => {
@@ -79,52 +98,65 @@ fn check(map: &HashSet<(i32, i32)>, pos: &(i32, i32), round: usize) -> (bool, (i
     return (false, (0, 0));
 }
 
-fn  get_bounding_box(map:&HashSet<(i32, i32)>) -> ((i32,i32),(i32,i32)){
+fn get_bounding_box(map: &HashSet<(i32, i32)>) -> ((i32, i32), (i32, i32)) {
     let mut bounding_box = ((i32::MAX, i32::MIN), (i32::MAX, i32::MIN));
     for pos in map {
-        bounding_box.0.0 = min(bounding_box.0.0, pos.0);
-        bounding_box.0.1 = max(bounding_box.0.1, pos.0);
-        bounding_box.1.0 = min(bounding_box.1.0, pos.1);
-        bounding_box.1.1 = max(bounding_box.1.1, pos.1);
+        bounding_box.0 .0 = min(bounding_box.0 .0, pos.0);
+        bounding_box.0 .1 = max(bounding_box.0 .1, pos.0);
+        bounding_box.1 .0 = min(bounding_box.1 .0, pos.1);
+        bounding_box.1 .1 = max(bounding_box.1 .1, pos.1);
     }
+    bounding_box.0 .1 += 1;
+    bounding_box.1 .1 += 1;
     return bounding_box;
+}
+
+fn perform_one_step(map: &HashSet<(i32, i32)>, round: usize) -> HashSet<(i32, i32)> {
+    let mut proposed_positions: HashSet<(i32, i32)> = HashSet::new();
+    let mut duplicated_proposed_positions: HashSet<(i32, i32)> = HashSet::new();
+    let mut elf_proposals: HashMap<(i32, i32), (i32, i32)> = HashMap::new();
+    for elf_pos in map {
+        let (moves, proposed_position) = check(&map, elf_pos, round);
+        if moves {
+            if proposed_positions.contains(&proposed_position) {
+                duplicated_proposed_positions.insert(proposed_position);
+                continue;
+            }
+            proposed_positions.insert(proposed_position);
+            elf_proposals.insert(*elf_pos, proposed_position);
+        }
+    }
+    let mut new_map: HashSet<(i32, i32)> = HashSet::new();
+
+    for elf_pos in map {
+        if elf_proposals.contains_key(elf_pos) {
+            let proposed_position = elf_proposals.get(elf_pos).unwrap();
+            let proposed_position_is_duplicated =
+                duplicated_proposed_positions.contains(proposed_position);
+            if !proposed_position_is_duplicated {
+                new_map.insert(*proposed_position);
+                continue;
+            }
+        }
+        new_map.insert(*elf_pos);
+    }
+    return new_map;
+}
+
+fn empty_tiles(map: &HashSet<(i32, i32)>) -> usize {
+    let bounding_box = get_bounding_box(&map);
+    let area: usize = ((bounding_box.0 .1 - bounding_box.0 .0)
+        * (bounding_box.1 .1 - bounding_box.1 .0)) as usize;
+    return area - map.len();
 }
 
 fn solve_part_one(map_in: &HashSet<(i32, i32)>) -> usize {
     let mut map = map_in.clone();
-    for round in 0..10 {
-        let mut proposed_positions: HashSet<(i32, i32)> = HashSet::new();
-        let mut duplicated_proposed_positions: HashSet<(i32, i32)> = HashSet::new();
-        let mut elf_proposals: HashMap<(i32, i32), (i32, i32)> = HashMap::new();
-        for elf_pos in &map {
-            let (can_move, proposed_position) = check(&map, elf_pos, round);
-            if can_move {
-                if proposed_positions.contains(&proposed_position){
-                    duplicated_proposed_positions.insert(proposed_position);
-                    continue;
-                }
-                proposed_positions.insert(proposed_position);
-                elf_proposals.insert(*elf_pos, proposed_position);
-            }
-        }
-        let mut new_map: HashSet<(i32, i32)> = HashSet::new();
 
-        for elf_pos in &map {
-            if elf_proposals.contains_key(elf_pos) {
-                let proposed_position = elf_proposals.get(elf_pos).unwrap();
-                let proposed_position_is_duplicated = duplicated_proposed_positions.contains(proposed_position);
-                if !proposed_position_is_duplicated {
-                    new_map.insert(*proposed_position);
-                    continue;
-                }
-            }
-            new_map.insert(*elf_pos);
-        }
-        map = new_map;
+    for round in 0..10 {
+        map = perform_one_step(&map, round);
     }
-    let bounding_box = get_bounding_box(&map);
-    let area:usize = ((bounding_box.0.1 - bounding_box.0.0) * (bounding_box.1.1 - bounding_box.1.0)) as usize;
-    return area - map.len();
+    return empty_tiles(&map);
 }
 
 fn get_input(file: &str) -> HashSet<(i32, i32)> {
@@ -145,13 +177,31 @@ fn get_input(file: &str) -> HashSet<(i32, i32)> {
 }
 
 pub fn solver(_: bool) {
-    let map = get_input("./src/day22/example_input.txt");
+    let map = get_input("./src/day23/input.txt");
     println!("Day23:");
     let empty_area = solve_part_one(&map);
     println!("Empty area part one: {empty_area}");
 }
 
-// #[cfg(test)]
-// mod tests {
-//     use super::*;
-// }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn day23_small_example() {
+        let mut map = get_input("./src/day23/small_example_input.txt");
+        // print_map(&map);
+        assert_eq!(3, empty_tiles(&map));
+        map = perform_one_step(&map, 0);
+        // println!();
+        // print_map(&map);
+        assert_eq!(5, empty_tiles(&map));
+    }
+
+    #[test]
+    fn day23_example() {
+        let map = get_input("./src/day23/example_input.txt");
+        let solution_part_one = solve_part_one(&map);
+        assert_eq!(110, solution_part_one);
+    }
+}
