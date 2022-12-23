@@ -159,6 +159,20 @@ fn solve_part_one(map_in: &HashSet<(i32, i32)>) -> usize {
     return empty_tiles(&map);
 }
 
+fn solve_part_two(map_in: &HashSet<(i32, i32)>) -> usize {
+    let mut map = map_in.clone();
+
+    let mut round = 0;
+    loop {
+        let new_map = perform_one_step(&map, round);
+        if new_map == map {
+            return round + 1;
+        }
+        map = new_map;
+        round += 1;
+    }
+}
+
 fn get_input(file: &str) -> HashSet<(i32, i32)> {
     let input = fs::read_to_string(file).expect("Should have been able to read the file");
     let rows: Vec<&str> = input.split("\r\n").collect();
@@ -181,6 +195,8 @@ pub fn solver(_: bool) {
     println!("Day23:");
     let empty_area = solve_part_one(&map);
     println!("Empty area part one: {empty_area}");
+    let number_of_rounds_until_no_movement = solve_part_two(&map);
+    println!("Round in which no elf moves: {number_of_rounds_until_no_movement}");
 }
 
 #[cfg(test)]
@@ -210,5 +226,19 @@ mod tests {
         let map = get_input("./src/day23/input.txt");
         let solution_part_one = solve_part_one(&map);
         assert_eq!(3849, solution_part_one);
+    }
+
+    #[test]
+    fn day23_example_part_two() {
+        let map = get_input("./src/day23/example_input.txt");
+        let solution_part_two = solve_part_two(&map);
+        assert_eq!(20, solution_part_two);
+    }
+
+    #[test]
+    fn day23_part_two() {
+        let map = get_input("./src/day23/input.txt");
+        let solution_part_two = solve_part_two(&map);
+        assert_eq!(995, solution_part_two);
     }
 }
