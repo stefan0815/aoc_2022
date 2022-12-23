@@ -188,7 +188,7 @@ mod tests {
     use super::*;
 
     #[test]
-    fn day23_small_example() {
+    fn day23_small_example_one_step() {
         let mut map = get_input("./src/day23/small_example_input.txt");
         // print_map(&map);
         assert_eq!(3, empty_tiles(&map));
@@ -199,9 +199,16 @@ mod tests {
     }
 
     #[test]
-    fn day23_example() {
+    fn day23_example_part_one() {
         let map = get_input("./src/day23/example_input.txt");
         let solution_part_one = solve_part_one(&map);
         assert_eq!(110, solution_part_one);
+    }
+
+    #[test]
+    fn day23_part_one() {
+        let map = get_input("./src/day23/input.txt");
+        let solution_part_one = solve_part_one(&map);
+        assert_eq!(3849, solution_part_one);
     }
 }
