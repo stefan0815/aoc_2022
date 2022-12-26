@@ -1,4 +1,8 @@
-use std::{cmp::max, collections::{HashMap, HashSet}, fs};
+use std::{
+    cmp::max,
+    collections::{HashMap, HashSet},
+    fs,
+};
 
 #[allow(dead_code)]
 fn print_blizzards(blizzards: &HashMap<(i32, i32), Vec<char>>, dimensions: (i32, i32)) {
@@ -131,31 +135,42 @@ fn advance_blizzards(
 }
 
 fn get_all_paths(
-    blizzards: &HashMap<(i32, i32), Vec<char>>,
+    blizzards: &mut HashMap<usize, HashMap<(i32, i32), Vec<char>>>,
     dimensions: (i32, i32),
     pos: (i32, i32),
     start: (i32, i32),
     goal: (i32, i32),
-    depth: usize,
+    time: usize,
     no_progress_limit: usize,
     best_soltion_so_far: usize,
-    previous_positions: &mut HashSet<((i32,i32), usize)>,
+    previous_positions: &mut HashSet<((i32, i32), usize)>,
     debug: bool,
 ) -> Vec<Vec<(i32, i32)>> {
-    if previous_positions.contains(&(pos,depth)){
+    if previous_positions.contains(&(pos, time)) {
         return vec![vec![]];
     }
-    previous_positions.insert((pos,depth));
+    previous_positions.insert((pos, time));
     if debug {
         println!("Current pos: ({},{})", pos.0, pos.1);
     }
     let distance_to_goal = distance(pos, goal);
-    if best_soltion_so_far > 0 && depth + distance_to_goal > best_soltion_so_far {
+    if best_soltion_so_far > 0 && time + distance_to_goal > best_soltion_so_far {
         return vec![vec![]];
     }
     let mut all_paths: Vec<Vec<(i32, i32)>> = Vec::new();
-    let new_blizards = advance_blizzards(blizzards, dimensions);
-    let possible_moves = possible_moves(&new_blizards, dimensions, pos, start, goal);
+    let new_blizzard;
+    if blizzards.contains_key(&(time +1 )) {
+        new_blizzard = blizzards.get(&(time +1) ).unwrap().clone();
+    }
+    else if blizzards.contains_key(&time) {
+        let current_blizzard = blizzards.get(&time).unwrap();
+        new_blizzard = advance_blizzards(current_blizzard, dimensions);
+        blizzards.insert(time + 1, new_blizzard.clone());
+    } else {
+        panic!("Current time is not in Blizzard Hashset");
+    }
+
+    let possible_moves = possible_moves(&new_blizzard, dimensions, pos, start, goal);
     if debug {
         println!("Possible moves: {}", possible_moves.len());
     }
@@ -174,12 +189,12 @@ fn get_all_paths(
         }
 
         let paths = get_all_paths(
-            &new_blizards,
+            blizzards,
             dimensions,
             new_pos,
             start,
             goal,
-            depth + 1,
+            time + 1,
             new_stand_still_limit,
             best_soltion_so_far,
             previous_positions,
@@ -195,7 +210,7 @@ fn get_all_paths(
 }
 
 fn solve(
-    blizzards: &HashMap<(i32, i32), Vec<char>>,
+    initial_blizzard: &HashMap<(i32, i32), Vec<char>>,
     dimensions: (i32, i32),
     start: (i32, i32),
     goal: (i32, i32),
@@ -205,8 +220,10 @@ fn solve(
     let distance_to_goal = distance(start, goal);
     for no_progress_limit in [0, 4, 8, 16] {
         let mut previous_positions = HashSet::new();
+        let mut blizzards: HashMap<usize, HashMap<(i32, i32), Vec<char>>> = HashMap::new();
+        blizzards.insert(0, initial_blizzard.clone());
         let all_paths = get_all_paths(
-            blizzards,
+            &mut blizzards,
             dimensions,
             start,
             start,
