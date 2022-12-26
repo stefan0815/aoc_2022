@@ -41,6 +41,7 @@ fn convert_single_digit_snafu_to_decimal(single_digit_snafu: char) -> i128 {
         _ => panic!("invalid single digit snafu"),
     }
 }
+
 fn get_snafu_places_needed(decimal: u128) -> u128 {
     let mut snafu_places = 1;
     let mut factor = 1;
@@ -64,14 +65,14 @@ fn convert_decimal_to_snafu(decimal: i128) -> Vec<char> {
         let factor = 5.pow(snafu_place.try_into().unwrap());
         let mut snafu_value = 0;
         let mut min_diff = u128::MAX;
-        for snafu_val in [-2,-1,0,1,2]{
-            let abs_diff = decimal_number.abs_diff(snafu_val*factor);
+        for snafu_val in [-2, -1, 0, 1, 2] {
+            let abs_diff = decimal_number.abs_diff(snafu_val * factor);
             if abs_diff < min_diff {
-                min_diff =abs_diff;
+                min_diff = abs_diff;
                 snafu_value = snafu_val;
             }
         }
-        decimal_number -= snafu_value*factor;
+        decimal_number -= snafu_value * factor;
         snafu.push(convert_single_decimal_to_single_snafu(snafu_value));
     }
 
@@ -133,12 +134,22 @@ mod tests {
         assert_eq!("2=-1=0", snafu_string);
     }
 
-
     #[test]
     fn day25_decimal_to_snafu_to_decimal() {
         let decimal = 4890;
         let snafu = convert_decimal_to_snafu(decimal);
         assert_eq!("2=-1=0", convert_snafu_to_string(&snafu));
         assert_eq!(4890, convert_snafu_to_decimal(&snafu));
+    }
+
+    #[test]
+    fn day25_part_one() {
+        let snafu_list = get_input("./src/day25/input.txt");
+        let sum = sum_snafu_list(&snafu_list);
+        assert_eq!(30638862852576, sum);
+        let snafu_sum = convert_decimal_to_snafu(sum);
+        let snafu_string = convert_snafu_to_string(&snafu_sum);
+        assert_eq!("2=01-0-2-0=-0==-1=01", snafu_string);
+        assert_eq!(30638862852576, convert_snafu_to_decimal(&snafu_sum));
     }
 }
