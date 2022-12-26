@@ -1,32 +1,35 @@
 use std::{cmp::max, collections::HashMap, fs};
 
-// fn convert_direction_to_char(direction: usize) -> char{
-//     match direction {
-//         0 => return '>',
-//         1 => return 'v',
-//         2 => return '<',
-//         3 => return '^',
-//         _ => panic!("wrong direction"),
-//     }
-// }
-
-// fn convert_char_to_direction(letter: char) -> usize{
-//     match letter {
-//         '>' => return 0,
-//         'v' => return 1,
-//         '<' => return 2,
-//         '^' => return 3,
-//         _ => panic!("wrong direction char"),
-//     }
-// }
-
-fn distance (pos: (i32, i32), goal: (i32, i32)) -> usize{
+fn print_blizzards(blizzards: &HashMap<(i32, i32), Vec<char>>, dimensions: (i32, i32)) {
+    println!();
+    for row in 0..dimensions.0 {
+        for col in 0..dimensions.1 {
+            let pos = (row, col);
+            if is_out_of_bounds(pos, dimensions) {
+                print!("#");
+                continue;
+            }
+            if blizzards.contains_key(&pos) {
+                let blizzard = blizzards.get(&pos).unwrap();
+                if blizzard.len() == 1 {
+                    print!("{}", blizzard[0]);
+                } else {
+                    print!("{}", blizzard.len());
+                }
+            } else {
+                print!(".");
+            }
+        }
+        println!();
+    }
+}
+fn distance(pos: (i32, i32), goal: (i32, i32)) -> usize {
     return (goal.0.abs_diff(pos.0) + goal.1.abs_diff(pos.1)) as usize;
 }
 
-fn print_path (path: &Vec<(i32,i32)>){
+fn print_path(path: &Vec<(i32, i32)>) {
     print!("Path: [");
-    for pos in path{
+    for pos in path {
         print!("({},{}),", pos.0, pos.1);
     }
     println!("]");
@@ -98,18 +101,18 @@ fn advance_blizzards(
         for direction in blizzard_directions {
             let mut new_blizzard_pos: (i32, i32);
             match direction {
-                '>' => new_blizzard_pos = (blizzard_pos.0 + 1, blizzard_pos.1),
-                'v' => new_blizzard_pos = (blizzard_pos.0, blizzard_pos.1 + 1),
-                '<' => new_blizzard_pos = (blizzard_pos.0 - 1, blizzard_pos.1),
-                '^' => new_blizzard_pos = (blizzard_pos.0, blizzard_pos.1 - 1),
+                '>' => new_blizzard_pos = (blizzard_pos.0, blizzard_pos.1 + 1),
+                'v' => new_blizzard_pos = (blizzard_pos.0 + 1, blizzard_pos.1),
+                '<' => new_blizzard_pos = (blizzard_pos.0, blizzard_pos.1 - 1),
+                '^' => new_blizzard_pos = (blizzard_pos.0 - 1, blizzard_pos.1),
                 _ => panic!("wrong blizzard direction"),
             }
             if is_out_of_bounds(new_blizzard_pos, dimensions) {
                 match direction {
-                    '>' => new_blizzard_pos = (1, new_blizzard_pos.1),
-                    'v' => new_blizzard_pos = (new_blizzard_pos.0, 1),
-                    '<' => new_blizzard_pos = (dimensions.0 - 2, new_blizzard_pos.1),
-                    '^' => new_blizzard_pos = (new_blizzard_pos.0, dimensions.1 - 2),
+                    '>' => new_blizzard_pos = (new_blizzard_pos.0, 1),
+                    'v' => new_blizzard_pos = (1, new_blizzard_pos.1),
+                    '<' => new_blizzard_pos = (new_blizzard_pos.0, dimensions.1 - 2),
+                    '^' => new_blizzard_pos = (dimensions.0 - 2, new_blizzard_pos.1),
                     _ => panic!("wrong blizzard direction"),
                 }
             }
@@ -137,7 +140,7 @@ fn get_all_paths(
     best_soltion_so_far: usize,
     debug: bool,
 ) -> Vec<Vec<(i32, i32)>> {
-    if debug{
+    if debug {
         println!("Current pos: ({},{})", pos.0, pos.1);
     }
     let distance_to_goal = distance(pos, goal);
@@ -154,7 +157,7 @@ fn get_all_paths(
         if new_pos == goal {
             return vec![vec![goal]];
         }
-        
+
         let mut new_stand_still_limit = no_progress_limit;
         let new_distance = distance(new_pos, goal);
         if new_distance >= distance_to_goal {
@@ -165,7 +168,7 @@ fn get_all_paths(
         }
 
         let paths = get_all_paths(
-            blizzards,
+            &new_blizards,
             dimensions,
             new_pos,
             start,
@@ -193,11 +196,7 @@ fn solve(
 ) -> Vec<(i32, i32)> {
     let mut best_path_so_far: Vec<(i32, i32)> = Vec::new();
     let distance_to_goal = distance(start, goal);
-    for no_progress_limit in [0, 2, 4, 8] {
-        let mut best_solution_so_far = best_path_so_far.len();
-        if best_solution_so_far == 0 {
-            best_solution_so_far = distance_to_goal * 3;
-        }
+    for no_progress_limit in [0, 4, 8, 16] {
         let all_paths = get_all_paths(
             blizzards,
             dimensions,
@@ -206,8 +205,8 @@ fn solve(
             goal,
             0,
             no_progress_limit,
-            best_solution_so_far,
-            false,
+            best_path_so_far.len(),
+            debug,
         );
         let mut all_paths_reaching_goal: Vec<Vec<(i32, i32)>> = Vec::new();
         for path in &all_paths {
@@ -216,13 +215,17 @@ fn solve(
             }
         }
         if debug {
-            println!("{}/{} paths reached the goal", all_paths_reaching_goal.len(), all_paths.len());
+            println!(
+                "no_progress_limit: {no_progress_limit}: {}/{} paths reached the goal",
+                all_paths_reaching_goal.len(),
+                all_paths.len()
+            );
         }
         all_paths_reaching_goal.sort_by(|a, b| a.len().cmp(&b.len()));
         if all_paths_reaching_goal.len() > 0 {
             best_path_so_far = all_paths_reaching_goal[0].clone();
         }
-        if best_path_so_far.len() == distance_to_goal{
+        if best_path_so_far.len() == distance_to_goal {
             return best_path_so_far;
         }
         if debug {
@@ -268,7 +271,7 @@ fn get_input(
 }
 
 pub fn solver(debug: bool) {
-    let (blizzards, dimensions, start, goal) = get_input("./src/day24/simple_example_input.txt");
+    let (blizzards, dimensions, start, goal) = get_input("./src/day24/example_input.txt");
 
     let best_path = solve(&blizzards, dimensions, start, goal, debug);
     println!("Day24:");
@@ -293,5 +296,13 @@ mod tests {
         assert_eq!((6, 8), dimensions);
         assert_eq!((0, 1), start);
         assert_eq!((5, 6), goal);
+    }
+
+    #[test]
+    fn day24_print_example() {
+        let (blizzards, dimensions, _, _) = get_input("./src/day24/example_input.txt");
+        print_blizzards(&blizzards, dimensions);
+        let new_blizzard = advance_blizzards(&blizzards, dimensions);
+        print_blizzards(&new_blizzard, dimensions);
     }
 }
