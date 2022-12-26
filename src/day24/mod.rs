@@ -159,10 +159,9 @@ fn get_all_paths(
     }
     let mut all_paths: Vec<Vec<(i32, i32)>> = Vec::new();
     let new_blizzard;
-    if blizzards.contains_key(&(time +1 )) {
-        new_blizzard = blizzards.get(&(time +1) ).unwrap().clone();
-    }
-    else if blizzards.contains_key(&time) {
+    if blizzards.contains_key(&(time + 1)) {
+        new_blizzard = blizzards.get(&(time + 1)).unwrap().clone();
+    } else if blizzards.contains_key(&time) {
         let current_blizzard = blizzards.get(&time).unwrap();
         new_blizzard = advance_blizzards(current_blizzard, dimensions);
         blizzards.insert(time + 1, new_blizzard.clone());
@@ -218,7 +217,7 @@ fn solve(
 ) -> Vec<(i32, i32)> {
     let mut best_path_so_far: Vec<(i32, i32)> = Vec::new();
     let distance_to_goal = distance(start, goal);
-    for no_progress_limit in [0, 4, 8, 16] {
+    for no_progress_limit in [0, 4, 8, 16, 32, 64, 128] {
         let mut previous_positions = HashSet::new();
         let mut blizzards: HashMap<usize, HashMap<(i32, i32), Vec<char>>> = HashMap::new();
         blizzards.insert(0, initial_blizzard.clone());
