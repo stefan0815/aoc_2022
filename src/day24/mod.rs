@@ -1,5 +1,6 @@
-use std::{cmp::max, collections::HashMap, fs};
+use std::{cmp::max, collections::{HashMap, HashSet}, fs};
 
+#[allow(dead_code)]
 fn print_blizzards(blizzards: &HashMap<(i32, i32), Vec<char>>, dimensions: (i32, i32)) {
     println!();
     for row in 0..dimensions.0 {
@@ -138,8 +139,13 @@ fn get_all_paths(
     depth: usize,
     no_progress_limit: usize,
     best_soltion_so_far: usize,
+    previous_positions: &mut HashSet<((i32,i32), usize)>,
     debug: bool,
 ) -> Vec<Vec<(i32, i32)>> {
+    if previous_positions.contains(&(pos,depth)){
+        return vec![vec![]];
+    }
+    previous_positions.insert((pos,depth));
     if debug {
         println!("Current pos: ({},{})", pos.0, pos.1);
     }
@@ -176,6 +182,7 @@ fn get_all_paths(
             depth + 1,
             new_stand_still_limit,
             best_soltion_so_far,
+            previous_positions,
             debug,
         );
         for path in paths {
@@ -197,6 +204,7 @@ fn solve(
     let mut best_path_so_far: Vec<(i32, i32)> = Vec::new();
     let distance_to_goal = distance(start, goal);
     for no_progress_limit in [0, 4, 8, 16] {
+        let mut previous_positions = HashSet::new();
         let all_paths = get_all_paths(
             blizzards,
             dimensions,
@@ -206,7 +214,8 @@ fn solve(
             0,
             no_progress_limit,
             best_path_so_far.len(),
-            debug,
+            &mut previous_positions,
+            false,
         );
         let mut all_paths_reaching_goal: Vec<Vec<(i32, i32)>> = Vec::new();
         for path in &all_paths {
@@ -271,7 +280,7 @@ fn get_input(
 }
 
 pub fn solver(debug: bool) {
-    let (blizzards, dimensions, start, goal) = get_input("./src/day24/example_input.txt");
+    let (blizzards, dimensions, start, goal) = get_input("./src/day24/input.txt");
 
     let best_path = solve(&blizzards, dimensions, start, goal, debug);
     println!("Day24:");
