@@ -28,16 +28,18 @@ fn print_blizzards(blizzards: &HashMap<(i32, i32), Vec<char>>, dimensions: (i32,
         println!();
     }
 }
-fn distance(pos: (i32, i32), goal: (i32, i32)) -> usize {
-    return (goal.0.abs_diff(pos.0) + goal.1.abs_diff(pos.1)) as usize;
-}
 
+#[allow(dead_code)]
 fn print_path(path: &Vec<(i32, i32)>) {
     print!("Path: [");
     for pos in path {
         print!("({},{}),", pos.0, pos.1);
     }
     println!("]");
+}
+
+fn distance(pos: (i32, i32), goal: (i32, i32)) -> usize {
+    return (goal.0.abs_diff(pos.0) + goal.1.abs_diff(pos.1)) as usize;
 }
 
 fn is_out_of_bounds(new_pos: (i32, i32), dimensions: (i32, i32)) -> bool {
@@ -214,10 +216,11 @@ fn solve(
     start: (i32, i32),
     goal: (i32, i32),
     debug: bool,
-) -> Vec<(i32, i32)> {
+) -> (Vec<(i32, i32)>, HashMap<(i32, i32), Vec<char>>) {
     let mut best_path_so_far: Vec<(i32, i32)> = Vec::new();
+    let mut last_blizzard: HashMap<(i32, i32), Vec<char>> = HashMap::new();
     let distance_to_goal = distance(start, goal);
-    for no_progress_limit in [0, 4, 8, 16, 32, 64, 128] {
+    for no_progress_limit in [128, 256, 512] {
         let mut previous_positions = HashSet::new();
         let mut blizzards: HashMap<usize, HashMap<(i32, i32), Vec<char>>> = HashMap::new();
         blizzards.insert(0, initial_blizzard.clone());
@@ -249,15 +252,18 @@ fn solve(
         all_paths_reaching_goal.sort_by(|a, b| a.len().cmp(&b.len()));
         if all_paths_reaching_goal.len() > 0 {
             best_path_so_far = all_paths_reaching_goal[0].clone();
+            last_blizzard = blizzards.get(&best_path_so_far.len()).unwrap().clone();
+            return (best_path_so_far, last_blizzard);
         }
         if best_path_so_far.len() == distance_to_goal {
-            return best_path_so_far;
+            last_blizzard = blizzards.get(&best_path_so_far.len()).unwrap().clone();
+            return (best_path_so_far, last_blizzard);
         }
-        if debug {
-            print_path(&best_path_so_far);
-        }
+        // if debug {
+        //     print_path(&best_path_so_far);
+        // }
     }
-    return best_path_so_far;
+    return (best_path_so_far, last_blizzard);
 }
 
 fn get_input(
@@ -296,11 +302,27 @@ fn get_input(
 }
 
 pub fn solver(debug: bool) {
-    let (blizzards, dimensions, start, goal) = get_input("./src/day24/input.txt");
+    let (initial_blizzard, dimensions, start, goal) = get_input("./src/day24/input.txt");
 
-    let best_path = solve(&blizzards, dimensions, start, goal, debug);
+    let (best_path, last_blizzard) = solve(&initial_blizzard, dimensions, start, goal, debug);
     println!("Day24:");
     println!("Shortest path is {} minutes", best_path.len());
+    let (best_path_back_to_start, last_blizzard_back_to_start) =
+        solve(&last_blizzard, dimensions, goal, start, debug);
+    println!(
+        "Shortest path back to start {} minutes",
+        best_path_back_to_start.len()
+    );
+    let (best_path_back_to_goal, _) =
+        solve(&last_blizzard_back_to_start, dimensions, start, goal, debug);
+    println!(
+        "Shortest path back to goal {} minutes",
+        best_path_back_to_goal.len()
+    );
+    println!(
+        "Shortest path three trips overall {} minutes",
+        best_path.len() + best_path_back_to_start.len() + best_path_back_to_goal.len()
+    );
 }
 
 #[cfg(test)]
@@ -324,10 +346,27 @@ mod tests {
     }
 
     #[test]
-    fn day24_print_example() {
+    fn day24_print_example_print_blizzards() {
         let (blizzards, dimensions, _, _) = get_input("./src/day24/example_input.txt");
         print_blizzards(&blizzards, dimensions);
         let new_blizzard = advance_blizzards(&blizzards, dimensions);
         print_blizzards(&new_blizzard, dimensions);
+    }
+
+    #[test]
+    fn day24_print_example_solve() {
+        let (initial_blizzard, dimensions, start, goal) =
+            get_input("./src/day24/example_input.txt");
+        let (best_path, last_blizzard) = solve(&initial_blizzard, dimensions, start, goal, false);
+        assert_eq!(18, best_path.len());
+        let (best_path_back_to_start, last_blizzard_back_to_start) =
+            solve(&last_blizzard, dimensions, goal, start, false);
+        let (best_path_back_to_goal, _) =
+            solve(&last_blizzard_back_to_start, dimensions, start, goal, false);
+
+        assert_eq!(
+            54,
+            best_path.len() + best_path_back_to_start.len() + best_path_back_to_goal.len()
+        );
     }
 }
